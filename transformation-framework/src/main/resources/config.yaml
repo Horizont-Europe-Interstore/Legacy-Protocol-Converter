@@ -1,0 +1,143 @@
+kumuluzee:
+  name: test-yaml
+  server:
+    http:
+      port: 9094
+  version: 1.0
+  env:
+    name: dev
+
+lpc:
+  transformations:
+    - name: Transformation to IEEE2030.5 Event in XML format
+      description: Transformation that maps from custom event to IEEE2030.5 Event structure in XML format
+      deviceMqttTopic: device2.event
+      natsSubject: device2.event
+      fromDeviceFormat: XML
+      forwardFormat: XML
+      outgoing:
+        '<event> 
+          <creationtime>$timestamp</creationtime> 
+          <eventstatus>
+            <currentstatus>
+              <mapping>
+                <xpath type="integer">/customevent/status</xpath>
+                <values>["scheduled", "active", "cancelled", "cancelled_with_r", "superseded"]</values>
+              </mapping>
+            </currentstatus>
+            <datetime>
+              <mapping>
+                <xpath type="datetime">/customevent/datetime</xpath>
+                <pattern>DD-MM-YYYY HH:mm:ss</values>
+              </mapping>
+            </datetime>
+            <potentiallysuperseded></potentiallysuperseded>
+          </eventstatus>
+          <interval> 
+            <duration>
+              <mapping>
+                <xpath type="integer">/customevent/duration</xpath>
+              </mapping>
+            </duration>
+            <start>
+              <mapping>
+                <xpath type="date">/customevent/start</xpath>
+                <pattern>DD-MM-YYYY</pattern>
+              </mapping>
+            </start>
+          </interval>
+        </event>'
+      ingoing:
+        '<customevent>
+          <date>
+          <mapping>
+          <xpath type="datetime">/event/eventstatus/datetime</xpath>
+          <pattern>DD-MM-YYYY HH:mm:ss</pattern>
+          </mapping>
+          </date>
+          <status>
+          <mapping>
+          <xpath type="integer">/event/eventstatus/currentstatus</xpath>
+          <values>["scheduled", "active", "cancelled", "cancelled_with_r", "superseded"]</values>
+          </mapping>
+          </status>
+          <start>
+          <mapping>
+          <xpath type="date">/event/interval/start</xpath>
+          <pattern>DD-MM-YYYY</pattern>
+          </mapping>
+          </start>
+          <duration>
+          <mapping>
+          <xpath type="integer">/event/interval/duration</xpath>
+          </mapping>
+          </duration>
+          </customevent>'
+    - name: Transformation to IEEE2030.5 Event in JSON format
+      description: Transformation that maps from custom event to IEEE2030.5 Event structure in JSON format
+      deviceMqttTopic: device2.event
+      natsSubject: device2.event
+      fromDeviceFormat: XML
+      forwardFormat: JSON
+      outgoing:
+        '{
+          "creationTime": $timestamp,
+          "EventStatus": {
+            "currentStatus": {
+              "mapping": {
+                "xpath": "/customevent/status",
+                "type": "integer",
+                "values": ["scheduled", "active", "cancelled", "cancelled_with_r", "superseded"]
+              }
+            },
+            "dateTime": {
+              "mapping": {
+                "xpath": "/customevent/datetime",
+                "type": "datetime",
+                "pattern": "DD-MM-YYYY HH:mm:ss"
+              }
+            },
+            "potentiallySuperseded": null
+          },
+          "interval": {
+            "duration": {
+              "mapping": {
+                "xpath": "/customevent/duration",
+                "type": "integer"
+              }
+            },
+            "start": {
+              "mapping": {
+                "xpath": "/customevent/start",
+                "type": "date",
+                "pattern": "DD-MM-YYYY"
+              }
+            }
+          }
+        }'
+      ingoing:
+        '<customevent>
+          <date>
+          <mapping>
+          <path type="date">["EventStatus"]["dateTime"]</path>
+          <pattern>DD-MM-YYYY HH:mm:ss</pattern>
+          </mapping>
+          </date>
+          <status>
+          <mapping>
+          <path type="string">[0]["EventStatus"]["currentStatus"]</path>
+          <values>["scheduled", "active", "cancelled", "cancelled_with_r", "superseded"]</values>
+          </mapping>
+          </status>
+          <start>
+          <mapping>
+          <path type="date">[0]["interval"]["start"]</path>
+          <pattern>DD-MM-YYYY</pattern>
+          </mapping>
+          </start>
+          <duration>
+          <mapping>
+          <path type="integer">[0]["interval"]["duration"]</path>
+          </mapping>
+          </duration>
+          </customevent>'
