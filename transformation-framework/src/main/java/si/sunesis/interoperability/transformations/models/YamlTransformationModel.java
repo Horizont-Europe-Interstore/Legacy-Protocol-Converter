@@ -12,21 +12,39 @@ public class YamlTransformationModel {
     @ConfigValue("description")
     private String description;
 
-    @ConfigValue("deviceMqttTopic")
-    private String deviceMqttTopic;
+    @ConfigValue("connections.incoming-topic")
+    private String incomingTopic;
 
-    @ConfigValue("natsSubject")
-    private String natsSubject;
+    @ConfigValue("connections.outgoing-topic")
+    private String outgoingTopic;
 
-    @ConfigValue("fromDeviceFormat")
-    private String fromDeviceFormat;
+    @ConfigValue("modbus-device-id")
+    private Integer modbusDeviceID;
 
-    @ConfigValue("forwardFormat")
-    private String forwardFormat;
+    @ConfigValue("modbus-function-code")
+    private Integer modbusFunctionCode;
 
-    @ConfigValue("outgoing")
-    private String outgoing;
+    @ConfigValue("connections.incoming-format")
+    private String incomingFormat;
 
-    @ConfigValue("ingoing")
-    private String ingoing;
+    @ConfigValue("connections.outgoing-format")
+    private String outgoingFormat;
+
+    @ConfigValue("to-incoming")
+    private String toIncoming;
+
+    @ConfigValue("to-incoming.modbus-registers")
+    private YamlModbusModel[] toModbus;
+
+    @ConfigValue("to-outgoing")
+    private String toOutgoing;
+
+    @ConfigValue("validateSchema")
+    private Boolean validateSchema = false;
+
+    @ConfigValue("connections.incoming-connection")
+    private String[] incomingConnections;
+
+    @ConfigValue("connections.outgoing-connection")
+    private String[] outgoingConnections;
 }

@@ -5,13 +5,15 @@ import com.kumuluz.ee.configuration.cdi.ConfigValue;
 import lombok.Data;
 
 import javax.enterprise.context.ApplicationScoped;
-import java.util.List;
 
 @Data
 @ConfigBundle("lpc")
 @ApplicationScoped
-public class YamlModel {
+public class YamlTransformationsModel {
 
     @ConfigValue("transformations")
     private YamlTransformationModel[] transformations;
+
+    @ConfigValue("connections")
+    private YamlConnectionModel[] connections;
 }
