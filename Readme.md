@@ -315,7 +315,7 @@ JSON IEEE2030.5 Event:
 ```json
 {
   "creationTime": 1702909917932,
-  "EventStatus": {
+  "eventStatus": {
     "currentStatus": 1,
     "dateTime": 1693216835000,
     "potentiallySuperseded": false
@@ -358,7 +358,7 @@ lpc:
       to-outgoing: 
         '{
             "creationTime": $timestamp,
-            "EventStatus": {
+            "eventStatus": {
                 "currentStatus": {
                   "lpc:mapping": {
                     "path": "/IncomingEvent/status",
@@ -410,7 +410,7 @@ JSON IEEE2030.5 Event:
 ```json
 {
   "creationTime": 1702909917932,
-  "EventStatus": {
+  "eventStatus": {
     "currentStatus": 1,
     "dateTime": 1693216835000,
     "potentiallySuperseded": false

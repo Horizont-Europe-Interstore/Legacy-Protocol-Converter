@@ -1,4 +1,24 @@
-package si.sunesis.interoperability.transformations.transformation;
+/*
+ *  Copyright (c) 2023-2024 Sunesis and/or its affiliates
+ *  and other contributors as indicated by the @author tags and
+ *  the contributor list.
+ *
+ *  Licensed under the MIT License (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  https://opensource.org/licenses/MIT
+ *
+ *  The software is provided "AS IS", WITHOUT WARRANTY OF ANY KIND, express or
+ *  implied, including but not limited to the warranties of merchantability,
+ *  fitness for a particular purpose and noninfringement. in no event shall the
+ *  authors or copyright holders be liable for any claim, damages or other
+ *  liability, whether in an action of contract, tort or otherwise, arising from,
+ *  out of or in connection with the software or the use or other dealings in the
+ *  software. See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+package si.sunesis.interoperability.lpc.transformations.transformation;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -12,9 +32,10 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
-import si.sunesis.interoperability.transformations.mappers.AbstractMapper;
-import si.sunesis.interoperability.transformations.mappers.JSONMapper;
-import si.sunesis.interoperability.transformations.mappers.XMLMapper;
+import si.sunesis.interoperability.lpc.transformations.mappers.AbstractMapper;
+import si.sunesis.interoperability.lpc.transformations.mappers.XMLMapper;
+import si.sunesis.interoperability.lpc.transformations.configuration.models.ModbusModel;
+import si.sunesis.interoperability.lpc.transformations.mappers.JSONMapper;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.xml.XMLConstants;
@@ -29,10 +50,16 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.StringWriter;
 import java.text.ParseException;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * @author David Trafela, Sunesis
+ * @since 1.0.0
+ */
 @Slf4j
 @ApplicationScoped
 public class ObjectTransformer {
@@ -78,7 +105,6 @@ public class ObjectTransformer {
                         return transformToJSON(document, mappingDefinition);
                     }
                 }
-
             } else {
                 if (Objects.equals(toFormat, "XML")) {
                     return transformToXML(objectInput, isValidXml(mappingDefinition));
@@ -91,6 +117,43 @@ public class ObjectTransformer {
         }
 
         return null;
+    }
+
+    public Map<Integer, Long> transformToModbus(List<ModbusModel> modbusModels, String input, String fromFormat) throws ParseException {
+        HashMap<Integer, Long> result = new HashMap<>();
+
+        JsonNode jsonNode = isValidJson(input);
+
+        if (jsonNode != null) {
+            if (fromFormat.equalsIgnoreCase("XML")) {
+                return new HashMap<>();
+            }
+
+            for (ModbusModel modbusModel : modbusModels) {
+                JSONMapper jsonMapper = new JSONMapper(modbusModel.getPath(), modbusModel.getType(), modbusModel.getValues(), modbusModel.getPattern());
+                String value = jsonMapper.getMappedValueJSON(jsonNode);
+
+                log.info("Added value for register: {} with value: {}", modbusModel.getAddress(), value);
+
+                result.put(modbusModel.getAddress(), Long.parseLong(value));
+            }
+        }
+
+        Document document = isValidXml(input);
+
+        if (document != null) {
+            if (fromFormat.equalsIgnoreCase("JSON")) {
+                return new HashMap<>();
+            }
+
+            for (ModbusModel modbusModel : modbusModels) {
+                XMLMapper xmlMapper = new XMLMapper(modbusModel.getPath(), modbusModel.getType(), modbusModel.getValues(), modbusModel.getPattern());
+                String value = xmlMapper.getMappedValueXML(document);
+                result.put(modbusModel.getAddress(), Long.parseLong(value));
+            }
+        }
+
+        return result;
     }
 
     private String transformToXML(Object input, Document mappedDocument) throws ParseException {
@@ -216,11 +279,17 @@ public class ObjectTransformer {
             transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
             transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
             transformer = transformerFactory.newTransformer();
-            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            transformer.setOutputProperty(OutputKeys.INDENT, "no");
             StringWriter writer = new StringWriter();
             transformer.transform(new DOMSource(document), new StreamResult(writer));
 
-            return writer.getBuffer().toString();
+            String xmlString = writer.getBuffer().toString();
+            int index = xmlString.indexOf("?>");
+            if (index != -1) {
+                xmlString = xmlString.substring(0, index + 2) + "\n" + xmlString.substring(index + 2);
+            }
+
+            return xmlString;
         } catch (TransformerException e) {
             log.error("Error transforming XML", e);
         }

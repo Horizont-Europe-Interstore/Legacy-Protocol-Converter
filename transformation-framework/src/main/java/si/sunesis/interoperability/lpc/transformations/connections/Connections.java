@@ -1,10 +1,27 @@
-package si.sunesis.interoperability.transformations.connections;
+/*
+ *  Copyright (c) 2023-2024 Sunesis and/or its affiliates
+ *  and other contributors as indicated by the @author tags and
+ *  the contributor list.
+ *
+ *  Licensed under the MIT License (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  https://opensource.org/licenses/MIT
+ *
+ *  The software is provided "AS IS", WITHOUT WARRANTY OF ANY KIND, express or
+ *  implied, including but not limited to the warranties of merchantability,
+ *  fitness for a particular purpose and noninfringement. in no event shall the
+ *  authors or copyright holders be liable for any claim, damages or other
+ *  liability, whether in an action of contract, tort or otherwise, arising from,
+ *  out of or in connection with the software or the use or other dealings in the
+ *  software. See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+package si.sunesis.interoperability.lpc.transformations.connections;
 
 import com.hivemq.client.mqtt.mqtt3.Mqtt3ClientBuilder;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5ClientBuilder;
-import com.hivemq.client.mqtt.mqtt5.auth.Mqtt5EnhancedAuthMechanism;
-import com.hivemq.client.mqtt.mqtt5.message.auth.Mqtt5EnhancedAuth;
-import com.hivemq.client.mqtt.mqtt5.message.auth.Mqtt5EnhancedAuthBuilder;
 import com.intelligt.modbus.jlibmodbus.master.ModbusMasterFactory;
 import com.intelligt.modbus.jlibmodbus.serial.SerialParameters;
 import com.intelligt.modbus.jlibmodbus.serial.SerialPort;
@@ -14,13 +31,13 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import si.sunesis.interoperability.common.AbstractRequestHandler;
+import si.sunesis.interoperability.lpc.transformations.configuration.Configuration;
+import si.sunesis.interoperability.lpc.transformations.configuration.models.ConnectionModel;
 import si.sunesis.interoperability.modbus.ModbusClient;
 import si.sunesis.interoperability.mqtt.Mqtt3Client;
 import si.sunesis.interoperability.mqtt.Mqtt5Client;
 import si.sunesis.interoperability.nats.NatsConnection;
 import si.sunesis.interoperability.nats.NatsRequestHandler;
-import si.sunesis.interoperability.transformations.models.YamlConnectionModel;
-import si.sunesis.interoperability.transformations.models.YamlTransformationsModel;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -34,14 +51,19 @@ import java.net.InetAddress;
 import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+/**
+ * @author David Trafela, Sunesis
+ * @since 1.0.0
+ */
 @Slf4j
 @ApplicationScoped
 public class Connections {
 
     @Inject
-    private YamlTransformationsModel yamlTransformationsModel;
+    private Configuration configuration;
 
     @Getter
     private final Map<String, AbstractRequestHandler> connectionsMap = new HashMap<>();
@@ -49,9 +71,9 @@ public class Connections {
     @SneakyThrows
     @PostConstruct
     public void init() {
-        YamlConnectionModel[] yamlConnections = yamlTransformationsModel.getConnections();
-        log.info("Found {} connections", yamlConnections.length);
-        for (YamlConnectionModel connection : yamlConnections) {
+        List<ConnectionModel> yamlConnections = configuration.getConnections();
+        log.info("Found {} connections", yamlConnections.size());
+        for (ConnectionModel connection : yamlConnections) {
             if (connection.getType().equalsIgnoreCase("NATS")) {
                 NatsConnection client = buildNatsClient(connection);
 
@@ -132,7 +154,7 @@ public class Connections {
         return modbusConnections;
     }
 
-    private NatsConnection buildNatsClient(YamlConnectionModel connection) throws IOException, InterruptedException {
+    private NatsConnection buildNatsClient(ConnectionModel connection) throws IOException, InterruptedException {
         NatsConnection client = new NatsConnection();
 
         client.setReconnect(connection.getReconnect());
@@ -149,7 +171,7 @@ public class Connections {
         return client;
     }
 
-    private Mqtt3Client buildMqtt3Client(YamlConnectionModel connection) {
+    private Mqtt3Client buildMqtt3Client(ConnectionModel connection) {
         Mqtt3ClientBuilder client = com.hivemq.client.mqtt.mqtt3.Mqtt3Client.builder()
                 .identifier(connection.getName())
                 .serverHost(connection.getHost())
@@ -193,7 +215,7 @@ public class Connections {
         return new Mqtt3Client(client.buildAsync());
     }
 
-    private Mqtt5Client buildMqtt5Client(YamlConnectionModel connection) {
+    private Mqtt5Client buildMqtt5Client(ConnectionModel connection) {
         Mqtt5ClientBuilder client = com.hivemq.client.mqtt.mqtt5.Mqtt5Client.builder()
                 .identifier(connection.getName())
                 .serverHost(connection.getHost())
@@ -231,7 +253,7 @@ public class Connections {
         return new Mqtt5Client(client.buildAsync());
     }
 
-    private SerialParameters getSerialParameters(YamlConnectionModel connection) {
+    private SerialParameters getSerialParameters(ConnectionModel connection) {
         SerialParameters serialParameters = new SerialParameters();
         if (connection.getDevice() == null) {
             throw new IllegalArgumentException("Device is required for serial connection");
@@ -273,7 +295,7 @@ public class Connections {
         return serialParameters;
     }
 
-    private KeyManagerFactory buildKeyManagerFactory(YamlConnectionModel connection) {
+    private KeyManagerFactory buildKeyManagerFactory(ConnectionModel connection) {
         try {
             KeyStore keyStore = KeyStore.getInstance(connection.getSsl().getKeyStore().getType());
             InputStream inKey = new FileInputStream(connection.getSsl().getKeyStore().getPath());
@@ -290,7 +312,7 @@ public class Connections {
         return null;
     }
 
-    private TrustManagerFactory buildTrustManagerFactory(YamlConnectionModel connection) {
+    private TrustManagerFactory buildTrustManagerFactory(ConnectionModel connection) {
         try {
             KeyStore trustStore = KeyStore.getInstance(connection.getSsl().getTrustStore().getType());
             InputStream in = new FileInputStream(connection.getSsl().getTrustStore().getPath());
