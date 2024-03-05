@@ -31,7 +31,9 @@ import si.sunesis.interoperability.lpc.transformations.configuration.models.Tran
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import java.io.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * @author David Trafela, Sunesis
@@ -42,9 +44,9 @@ import java.util.*;
 @ApplicationScoped
 public class Configuration {
 
-    private List<ConnectionModel> connections = new ArrayList<>();
+    private final List<ConnectionModel> connections = new ArrayList<>();
 
-    private List<TransformationModel> transformations = new ArrayList<>();
+    private final List<TransformationModel> transformations = new ArrayList<>();
 
     @PostConstruct
     private void init() {
@@ -62,15 +64,11 @@ public class Configuration {
                 }
             }
 
-            log.info("Configuration directory: " + configuration);
-
             File dir = new File(configuration);
 
             if (!dir.exists() || !dir.isDirectory()) {
                 throw new RuntimeException("Configuration directory does not exist");
             }
-
-            Set<ConnectionModel> connectionModelSet = new HashSet<>();
 
             for (File file : Objects.requireNonNull(dir.listFiles())) {
                 if (file.getName().endsWith(".yaml")) {
@@ -78,12 +76,10 @@ public class Configuration {
                     TransformationsModel transformationsModel = objectMapper.readValue(
                             fileContent,
                             TransformationsModel.class);
-                    connectionModelSet.addAll(transformationsModel.getConnections());
+                    this.connections.addAll(transformationsModel.getConnections());
                     this.transformations.addAll(transformationsModel.getTransformations());
                 }
             }
-
-            this.connections.addAll(connectionModelSet);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

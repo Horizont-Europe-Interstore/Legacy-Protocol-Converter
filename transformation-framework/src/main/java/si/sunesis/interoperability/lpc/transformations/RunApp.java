@@ -41,56 +41,6 @@ import javax.inject.Inject;
 @ApplicationScoped
 public class RunApp {
 
-    private static final String deviceXMLInput = """
-            <customevent>
-            <datetime>28-08-2023 12:00:35</datetime>
-            <status>active</status>
-            <start>28-08-2023</start>
-            <duration>900</duration>
-            </customevent>
-            """;
-
-    private static final String deviceJsonInput = """
-            {
-            "datetime": "28-08-2023 12:00:35",
-            "status": "active",
-            "start": "28-08-2023",
-            "duration": 900
-            }
-            """;
-
-    private static final String serverXMLInput = """
-            <event>
-            	<creationtime>1702909917932</creationtime>
-            	<eventstatus>
-            		<currentstatus> 1 </currentstatus>
-            		<datetime> 1693216835000 </datetime>
-            		<potentiallysuperseded></potentiallysuperseded>
-            	</eventstatus>
-            	<interval>
-            		<duration> 900 </duration>
-            		<start> 1693216835000 </start>
-            	</interval>
-            </event>
-            """;
-
-    private static final String serverJsonInput = """
-            {
-              "creationTime": 1702909917932,
-              "EventStatus": {
-                "currentStatus": 1,
-                "dateTime": 1693216835000,
-                "potentiallySuperseded": null
-              },
-              "interval": {
-                "duration": 900,
-                "start": 1693216835000
-              }
-            }
-            """;
-
-    // TODO: add validation of xml and json
-
     private final Configuration configuration;
 
     private final ObjectTransformer objectTransformer;
@@ -111,11 +61,11 @@ public class RunApp {
             TransformationHandler handler = new TransformationHandler(transformationModel, objectTransformer, connections);
             try {
                 handler.handleConnections();
-            } catch (ModbusNumberException e) {
+                handler.handleOutgoingTransformations();
+                handler.handleIncomingTransformations();
+            } catch (Exception e) {
                 log.error("Error handling connections", e);
             }
         }
     }
 }
-
-// registracija naprav

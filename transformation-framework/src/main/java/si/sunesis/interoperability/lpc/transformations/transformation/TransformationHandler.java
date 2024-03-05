@@ -55,24 +55,25 @@ public class TransformationHandler {
 
     private final TransformationModel transformation;
 
+    private List<RequestHandler> incomingConnections = new ArrayList<>();
+    private List<RequestHandler> outgoingConnections = new ArrayList<>();
+
     public TransformationHandler(TransformationModel transformation, ObjectTransformer objectTransformer, Connections connections) {
         this.transformation = transformation;
         this.objectTransformer = objectTransformer;
         this.connections = connections;
+
+        log.info("Transformation: {}", transformation.getName());
     }
 
-    public void handleConnections() throws ModbusNumberException {
-        log.info("Transformation: {}", transformation.getName());
-
+    public void handleConnections() {
         String[] incomingConnectionNames = transformation.getConnections().getIncomingConnections();
         String[] outgoingConnectionNames = transformation.getConnections().getOutgoingConnections();
 
-        List<RequestHandler> incomingConnections =
-                new ArrayList<>(connections.getMqttConnections(incomingConnectionNames).values());
+        incomingConnections.addAll(connections.getMqttConnections(incomingConnectionNames).values());
         incomingConnections.addAll(connections.getNatsConnections(incomingConnectionNames).values());
 
-        List<RequestHandler> outgoingConnections =
-                new ArrayList<>(connections.getMqttConnections(outgoingConnectionNames).values());
+        outgoingConnections.addAll(connections.getMqttConnections(outgoingConnectionNames).values());
         outgoingConnections.addAll(connections.getNatsConnections(outgoingConnectionNames).values());
 
         if (!connections.getModbusConnections(outgoingConnectionNames).isEmpty()) {
@@ -87,7 +88,9 @@ public class TransformationHandler {
             } catch (ModbusIOException ignored) {
             }
         }
+    }
 
+    public void handleOutgoingTransformations() {
         if (transformation.getToOutgoing() != null) {
             log.info("Incoming connections: {}", incomingConnections);
             for (RequestHandler incomingConnection : incomingConnections) {
@@ -107,9 +110,10 @@ public class TransformationHandler {
                 });
             }
         }
+    }
 
-        log.info("To incoming modbus: {}", transformation.getToModbus());
-        log.info("To incoming: {}", transformation.getToIncoming());
+    public void handleIncomingTransformations() {
+        String[] incomingConnectionNames = transformation.getConnections().getIncomingConnections();
 
         if (transformation.getToIncoming() != null) {
             for (RequestHandler outgoingConnection : outgoingConnections) {
@@ -140,7 +144,7 @@ public class TransformationHandler {
                     try {
                         buildModbusRequests(msg, incomingModbusConnections, outgoingConnections);
                     } catch (ModbusNumberException | ParseException e) {
-                        throw new RuntimeException(e);
+                        log.error("Error building modbus requests", e);
                     }
                 });
             }
