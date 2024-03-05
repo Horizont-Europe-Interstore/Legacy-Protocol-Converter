@@ -526,4 +526,4 @@ Build the Docker image: ```docker build -t lpc:latest .```
 
 Run the Docker container and mount configuration folder: ```docker run -v /path/to/config:/app/conf lpc:latest```
 
-Pre-built Dcoker images are avalibale here: https://hub.docker.com/r/interstore/legacy-protocol-converter
+Pre-built Docker images are available here: https://hub.docker.com/r/interstore/legacy-protocol-converter
