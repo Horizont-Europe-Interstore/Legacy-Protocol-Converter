@@ -1,9 +1,10 @@
 # Legacy Protocol Converter (LPC)
 
-Legacy Protocol Converter is a framework designed to convert messages 
+Legacy Protocol Converter is a framework designed to convert messages
 from one protocol to another. Currently, it supports Modbus, MQTT and NATS connections.
 LPC can be configured through configuration file in YAML format.
 
+## Configuration
 General format of the configuration file is following:
 ```yaml
 lpc:
@@ -14,8 +15,8 @@ lpc:
     -
     -
 ```
-## Connections
-Each incoming/outgoing connection must be configured in the list of connections so the LPC 
+### Connections
+Each incoming/outgoing connection must be configured in the list of connections so the LPC
 knows how to connect.
 Possible options for each connection are following:
 ```yaml
@@ -38,9 +39,9 @@ lpc:
   transformations:
     -...
 ```
-**name** and **type** are required keys. 
-### NATS
-Currently supported parameters for connection with NATS are **host**, 
+**name** and **type** are required keys.
+#### NATS
+Currently supported parameters for connection with NATS are **host**,
 **port**, **username**, **password** and **reconnect**.
 
 Example of configuration for NATS:
@@ -58,7 +59,7 @@ lpc:
     -...
 ```
 
-### MQTT
+#### MQTT
 Currently supported parameters for connection with MQTT are **host**,
 **port**, **ssl**, **username**, **password** and **reconnect**.
 
@@ -72,17 +73,17 @@ lpc:
       port: 8883
       ssl:
         default: true
-      username: userTest
-      password: testUser
+      username: username
+      password: password
       reconnect: false
   transformations:
     -...
 ```
 
-### Modbus
+#### Modbus
 Configuration for Modbus depends on connection type, LPC supports serial connection or TCP connection.
 For TCP connection parameters **host** and **port** are required.
-For serial connection parameters **device** is required, optional parameters are 
+For serial connection parameters **device** is required, optional parameters are
 **baud-rate**, **data-bits**, **parity** and **stop-bits**.
 
 Example of configuration for serial Modbus connection:
@@ -111,8 +112,8 @@ lpc:
     -...
 ```
 
-## Transformations
-In the transformations section, each transformation is described, from which topics to listen on to 
+### Transformations
+In the transformations section, each transformation is described, from which topics to listen on to
 mapping incoming/outgoing messages to specified format and structure.
 
 Possible options for each transformation are following:
@@ -158,14 +159,14 @@ Options:
 - **connections.modbus-function-code:** If using Modbus, it tells the LPC which function code to use when requesting/writing data.
 - **connections.modbus-device-id:** If using Modbus, it tells the LPC to which device it will send the data.
 - **connections.outgoing-connection:** List of connection names, this connections will be used for sending/receiving the data from server. Must match the name in the **connections**.
-- **connections.outgoing-topic:** On which topic MQTT/NATS client will send the outgoing messages or listen for message from server. 
+- **connections.outgoing-topic:** On which topic MQTT/NATS client will send the outgoing messages or listen for message from server.
 - **connections.outgoing-format:** Format of the outgoing messages.
 - **to-outgoing:** Structure of the outgoing message with defined mappings.
 - **to-incoming:** Structure of the incoming message with defined mappings. If this using Modbus, this must be omitted.
 - **to-incoming.modbus-registers:** List of definitions of modbus registers used for writing/reading the data.
 
 If **to-outgoing** message structure is present, then LPC will listen/request messages and send the transformed message to the **outgoing-topic**.
-When using **to-outgoing** in combination with Modbus as  **connections.incoming-connection**, LPC will request data from 
+When using **to-outgoing** in combination with Modbus as  **connections.incoming-connection**, LPC will request data from
 Modbus at client id **connections.modbus-device-id** using function code **connections.modbus-function-code** for each defined mapping.
 
 If **to-incoming** message structure is present, then LPC will listen/request messages and send the transformed message to the **incoming-topic**, or it will request/write data to appropriate Modbus registers.
@@ -190,7 +191,7 @@ When using Modbus, number of bits is required, so *integer8* (or *int8*), *int16
 For easier explanation of options, we will use examples.
 
 ### Transforming from JSON to XML
-We will be transforming JSON structure of IncomingEvent to 
+We will be transforming JSON structure of IncomingEvent to
 XML structure of OutgoingEvent. These two structures are used just as examples.
 
 JSON IncomingEvent:
@@ -231,10 +232,10 @@ lpc:
       type: MQTT
       ssl:
         default: true
-      host: 37aad5450fca492297d7d3bc3329f4ba.s2.eu.hivemq.cloud
+      host: localhost
       port: 8883
-      username: lpc-user
-      password: zv.NaiixwWZ7wCC
+      username: username
+      password: password
   transformations:
     - name: JSON IncomingEvent to XML IEEE2030.5 Event
       description: Example showing transformation of messages from JSON to XML
@@ -339,10 +340,10 @@ lpc:
       type: MQTT
       ssl:
         default: true
-      host: 37aad5450fca492297d7d3bc3329f4ba.s2.eu.hivemq.cloud
+      host: localhost
       port: 8883
-      username: lpc-user
-      password: zv.NaiixwWZ7wCC
+      username: username
+      password: password
   transformations:
     - name: XML IncomingEvent to JSON IEEE2030.5 Event 
       description: Example showing transformation of messages from XML to JSON
@@ -485,3 +486,25 @@ lpc:
 
 Here we see that the mapping is done with register addresses, and we are specifying the type of the value at the register address.
 LPC will for each register send new request with function code specified at ```modbus-function-code``` to specified device at```modbus-device-id```.
+
+## Deployment
+LPC can be deployed as a JAR or as a Docker container.
+When deploying, path to the configuration file must be provided either as an argument or mounted as a volume.
+Default path to the configuration folder is ```./conf```.
+In this folder, multiple configuration files can be placed, and LPC will read all of them.
+### JAR
+Build the JAR: ```mvn clean package```
+
+Deploy the application: ```java -jar transformation-framework/target/transformation-framework-1.0-SNAPSHOT.jar```
+
+This will take the configuration files from ```./conf``` folder. If you want to specify a different folder, you can do so by providing the path as an argument:
+
+```java -jar transformation -DCONFIGURATION=/path/to/config  transformation-framework/target/transformation-framework-1.0-SNAPSHOT.jar```
+This will take the configuration files from ```/path/to/config``` folder.
+
+### Docker
+Build the JAR: ```mvn clean package```
+
+Build the Docker image: ```docker build -t lpc:latest .```
+
+Run the Docker container and mount configuration folder: ```docker run -v /path/to/config:/app/conf lpc:latest```
