@@ -1,30 +1,24 @@
-# Legacy Protocol Converter (LPC)
+# Legacy Systems Protocol Converter (LPC)
 
-Legacy Protocol Converter is a framework designed to convert messages
-from one protocol to another. Currently, it supports Modbus, MQTT and NATS connections.
-LPC can be configured through configuration file in YAML format.
+The Legacy Systems Protocol Converter, initially developed within the Horizon Europe Interstore project, acts as a middleware, allowing devices that use different communication protocols to exchange data with EMS systems that use the IEEE2030.5 standard.  It supports:
+- IEEE2030.5 communication: This is the primary function of the Legacy Protocol Converter. It can handle IEEE2030.5 messages in both JSON and XML formats.
+- Next-generation NATS messaging: This is a new messaging protocol that the converter uses to communicate with devices and EMS systems. It is designed to be more efficient and scalable than traditional protocols like REST over HTTP.
+- MQTT and Modbus protocols: These are common protocols used by many devices. The Legacy Protocol Converter can translate messages from these protocols into the IEEE2030.5 format for use with EMS systems.
 
-## Deployment
-LPC can be deployed as a JAR or as a Docker container.
-When deploying, path to the configuration file must be provided either as an argument or mounted as a volume.
-Default path to the configuration folder is ```./conf```.
-In this folder, multiple configuration files can be placed, and LPC will read all of them.
-### JAR
-Build the JAR: ```mvn clean package```
+Key features of Legacy Protocol Converter:
+- Built-in transformation framework: This framework allows users to define how incoming messages should be transformed into the outgoing IEEE2030.5 format. This is important because different devices and systems may use different message formats.
+- Configuration file: The converter uses a configuration file to specify connection details for NATS, MQTT, and Modbus devices. Users can also define transformations within the configuration file.
+- Flexibility: The converter can support multiple transformations, each with different incoming and outgoing connections, message formats, and structures. This allows for a high degree of flexibility in how the converter is used.
 
-Deploy the application: ```java -jar transformation-framework/target/transformation-framework-1.0-SNAPSHOT.jar```
+The Legacy Protocol Converter can be deployed and run using:
+- A Docker container. Pre-built Docker images are available on Docker Hub, a custom Docker image can be build.
+- Using a Java JAR file and execute it on any computer with OpenJDK Java Runtime Environment.
+- Compile and build the project out of source code. 
+- It is possible to integrate LPC in custom projects by including packages. 
 
-This will take the configuration files from ```./conf``` folder. If you want to specify a different folder, you can do so by providing the path as an argument:
+LPC can be executed on-premise or in the cloud. It supports a variety of environments, including Kubernetes, Docker and classical virtual machines, as well as bare-metal. 
 
-```java -jar transformation -DCONFIGURATION=/path/to/config  transformation-framework/target/transformation-framework-1.0-SNAPSHOT.jar```
-This will take the configuration files from ```/path/to/config``` folder.
-
-### Docker
-Build the JAR: ```mvn clean package```
-
-Build the Docker image: ```docker build -t lpc:latest .```
-
-Run the Docker container and mount configuration folder: ```docker run -v /path/to/config:/app/conf lpc:latest```
+Overall, the Legacy Protocol Converter is a tool for enabling communication between devices and EMS systems that use different communication protocols. It supports the latest IEEE2030.5 standard and provides a flexible and efficient way to translate messages between different protocols.
 
 ## Configuration
 General format of the configuration file is following:
@@ -508,3 +502,27 @@ lpc:
 
 Here we see that the mapping is done with register addresses, and we are specifying the type of the value at the register address.
 LPC will for each register send new request with function code specified at ```modbus-function-code``` to specified device at```modbus-device-id```.
+
+## Deployment
+LPC can be deployed as a JAR or as a Docker container.
+When deploying, path to the configuration file must be provided either as an argument or mounted as a volume.
+Default path to the configuration folder is ```./conf```.
+In this folder, multiple configuration files can be placed, and LPC will read all of them.
+### JAR
+Build the JAR: ```mvn clean package```
+
+Deploy the application: ```java -jar transformation-framework/target/transformation-framework-1.0-SNAPSHOT.jar```
+
+This will take the configuration files from ```./conf``` folder. If you want to specify a different folder, you can do so by providing the path as an argument:
+
+```java -jar transformation -DCONFIGURATION=/path/to/config  transformation-framework/target/transformation-framework-1.0-SNAPSHOT.jar```
+This will take the configuration files from ```/path/to/config``` folder.
+
+### Docker
+Build the JAR: ```mvn clean package```
+
+Build the Docker image: ```docker build -t lpc:latest .```
+
+Run the Docker container and mount configuration folder: ```docker run -v /path/to/config:/app/conf lpc:latest```
+
+Pre-built Dcoker images are avalibale here: https://hub.docker.com/r/interstore/legacy-protocol-converter
