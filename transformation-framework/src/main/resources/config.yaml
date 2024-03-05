@@ -1,0 +1,8 @@
+kumuluzee:
+  name: legacy-protocol-converter
+  server:
+    http:
+      port: 9094
+  version: 1.0
+  env:
+    name: dev
