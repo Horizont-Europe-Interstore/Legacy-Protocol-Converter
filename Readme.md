@@ -516,6 +516,7 @@ Deploy the application: ```java -jar transformation-framework/target/transformat
 This will take the configuration files from ```./conf``` folder. If you want to specify a different folder, you can do so by providing the path as an argument:
 
 ```java -jar transformation -DCONFIGURATION=/path/to/config  transformation-framework/target/transformation-framework-1.0-SNAPSHOT.jar```
+
 This will take the configuration files from ```/path/to/config``` folder.
 
 ### Docker
