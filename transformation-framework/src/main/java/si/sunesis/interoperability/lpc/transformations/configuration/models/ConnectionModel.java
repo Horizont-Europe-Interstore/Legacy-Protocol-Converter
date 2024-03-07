@@ -54,6 +54,19 @@ public class ConnectionModel {
     // MQTT
     private Integer version = 5;
 
+    // RabbitMQ
+    @JsonProperty("virtual-host")
+    private String virtualHost = "/";
+
+    @JsonProperty("exchange-name")
+    private String exchangeName;
+
+    @JsonProperty("routing-key")
+    private String routingKey = "";
+
+    @JsonProperty("exchange-type")
+    private String exchangeType = "direct";
+
     // Modbus
     private String device;
 

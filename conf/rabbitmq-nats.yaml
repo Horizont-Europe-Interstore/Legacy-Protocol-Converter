@@ -1,0 +1,58 @@
+connections:
+  - name: NATS-connection
+    type: NATS
+    host: nats://localhost
+    port: 4222
+    reconnect: true
+  - name: RabbitMQ-connection
+    type: RabbitMQ
+    host: localhost
+transformations:
+  - name: XML IncomingEvent to JSON IEEE2030.5 Event
+    description: Example showing transformation of messages from XML to JSON
+    connections:
+      incoming-connection:
+        - RabbitMQ-connection
+      incoming-topic: topic1
+      incoming-format: XML
+      outgoing-connection:
+        - NATS-connection
+      outgoing-topic: event/myevent
+      outgoing-format: JSON
+    to-outgoing:
+      '{
+            "creationTime": $timestamp,
+            "eventStatus": {
+                "currentStatus": {
+                  "lpc:mapping": {
+                    "path": "/IncomingEvent/status",
+                    "type": "integer",
+                    "values": ["scheduled", "active", "cancelled", "cancelled_with_r", "superseded"]
+                  }
+                },
+                "dateTime": {
+                  "lpc:mapping": {
+                    "path": "/IncomingEvent/datetime",
+                    "type": "datetime",
+                    "pattern": "dd-MM-yyyy HH:mm:ss"
+                  }
+                },
+                "potentiallySuperseded": false
+              },
+              "interval": {
+                "duration": {
+                  "lpc:mapping": {
+                    "path": "/IncomingEvent/duration",
+                    "type": "integer"
+                  }
+                },
+                "start": {
+                  "lpc:mapping": {
+                    "path": "/IncomingEvent/start",
+                    "type": "date",
+                    "pattern": "dd-MM-yyyy"
+                  }
+                }
+              }
+            }
+        '

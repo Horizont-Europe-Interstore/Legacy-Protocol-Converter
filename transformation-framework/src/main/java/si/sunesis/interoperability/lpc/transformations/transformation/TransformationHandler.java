@@ -72,9 +72,11 @@ public class TransformationHandler {
 
         incomingConnections.addAll(connections.getMqttConnections(incomingConnectionNames).values());
         incomingConnections.addAll(connections.getNatsConnections(incomingConnectionNames).values());
+        incomingConnections.addAll(connections.getRabbitMQConnections(incomingConnectionNames).values());
 
         outgoingConnections.addAll(connections.getMqttConnections(outgoingConnectionNames).values());
         outgoingConnections.addAll(connections.getNatsConnections(outgoingConnectionNames).values());
+        outgoingConnections.addAll(connections.getRabbitMQConnections(outgoingConnectionNames).values());
 
         if (!connections.getModbusConnections(outgoingConnectionNames).isEmpty()) {
             log.error("Modbus connections are not supported as outgoing connections");
@@ -82,7 +84,6 @@ public class TransformationHandler {
 
         for (ModbusClient client : connections.getModbusConnections(incomingConnectionNames).values()) {
             try {
-                log.info("Modbus client connect: {}", incomingConnectionNames);
                 client.getClient().connect();
                 log.info("Modbus client: {}", client.getClient().isConnected());
             } catch (ModbusIOException ignored) {

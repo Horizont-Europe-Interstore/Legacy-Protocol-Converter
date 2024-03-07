@@ -26,6 +26,8 @@ import com.intelligt.modbus.jlibmodbus.master.ModbusMasterFactory;
 import com.intelligt.modbus.jlibmodbus.serial.SerialParameters;
 import com.intelligt.modbus.jlibmodbus.serial.SerialPort;
 import com.intelligt.modbus.jlibmodbus.tcp.TcpParameters;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
 import io.nats.client.Options;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -38,6 +40,8 @@ import si.sunesis.interoperability.mqtt.Mqtt3Client;
 import si.sunesis.interoperability.mqtt.Mqtt5Client;
 import si.sunesis.interoperability.nats.NatsConnection;
 import si.sunesis.interoperability.nats.NatsRequestHandler;
+import si.sunesis.interoperability.rabbitmq.ChannelHandler;
+import si.sunesis.interoperability.rabbitmq.RabbitMQClient;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -53,6 +57,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 /**
  * @author David Trafela, Sunesis
@@ -105,6 +110,9 @@ public class Connections {
                     ModbusClient client = new ModbusClient(ModbusMasterFactory.createModbusMasterRTU(serialParameters));
                     this.connectionsMap.put(connection.getName(), client);
                 }
+            } else if (connection.getType().equalsIgnoreCase("RabbitMQ")) {
+                RabbitMQClient client = buildRabbitMQClient(connection);
+                this.connectionsMap.put(connection.getName(), client);
             }
         }
     }
@@ -152,6 +160,21 @@ public class Connections {
             }
         }
         return modbusConnections;
+    }
+
+    public Map<String, RabbitMQClient> getRabbitMQConnections(String... connectionNames) {
+        HashMap<String, RabbitMQClient> rabbitMQConnections = new HashMap<>();
+        for (Map.Entry<String, AbstractRequestHandler> entry : connectionsMap.entrySet()) {
+            if (entry.getValue() instanceof RabbitMQClient handler) {
+                if (connectionNames != null && connectionNames.length > 0
+                        && !Arrays.asList(connectionNames).contains(entry.getKey())) {
+                    continue;
+                }
+
+                rabbitMQConnections.put(entry.getKey(), handler);
+            }
+        }
+        return rabbitMQConnections;
     }
 
     private NatsConnection buildNatsClient(ConnectionModel connection) throws IOException, InterruptedException {
@@ -251,6 +274,44 @@ public class Connections {
         }
 
         return new Mqtt5Client(client.buildAsync());
+    }
+
+    private RabbitMQClient buildRabbitMQClient(ConnectionModel connection) throws IOException, TimeoutException {
+        Connection connectionMQ = getRabbitMQConnection(connection);
+
+        log.info("Connected to RabbitMQ: {}", connectionMQ.isOpen());
+
+        ChannelHandler channelHandler = new ChannelHandler.ChannelHandlerBuilder()
+                .setConnection(connectionMQ)
+                .setExchangeName(connection.getExchangeName())
+                .setExchangeType(connection.getExchangeType())
+                .setRoutingKey(connection.getRoutingKey())
+                .build();
+
+        return new RabbitMQClient(channelHandler);
+    }
+
+    private static Connection getRabbitMQConnection(ConnectionModel connection) throws IOException, TimeoutException {
+        ConnectionFactory factory = new ConnectionFactory();
+
+        factory.setHost(connection.getHost());
+
+        if (connection.getPort() != null) {
+            factory.setPort(connection.getPort());
+        }
+
+        factory.setVirtualHost(connection.getVirtualHost());
+
+        if (Boolean.TRUE.equals(connection.getReconnect())) {
+            factory.setAutomaticRecoveryEnabled(true);
+        }
+
+        if (connection.getUsername() != null && connection.getPassword() != null) {
+            factory.setUsername(connection.getUsername());
+            factory.setPassword(connection.getPassword());
+        }
+
+        return factory.newConnection();
     }
 
     private SerialParameters getSerialParameters(ConnectionModel connection) {
