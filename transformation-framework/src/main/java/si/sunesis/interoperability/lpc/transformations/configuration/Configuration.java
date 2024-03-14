@@ -24,9 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import si.sunesis.interoperability.lpc.transformations.configuration.models.ConnectionModel;
-import si.sunesis.interoperability.lpc.transformations.configuration.models.TransformationModel;
-import si.sunesis.interoperability.lpc.transformations.configuration.models.TransformationsModel;
+import si.sunesis.interoperability.lpc.transformations.configuration.models.ConfigurationModel;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -44,9 +42,7 @@ import java.util.Objects;
 @ApplicationScoped
 public class Configuration {
 
-    private final List<ConnectionModel> connections = new ArrayList<>();
-
-    private final List<TransformationModel> transformations = new ArrayList<>();
+    private final List<ConfigurationModel> configurations = new ArrayList<>();
 
     @PostConstruct
     private void init() {
@@ -73,11 +69,10 @@ public class Configuration {
             for (File file : Objects.requireNonNull(dir.listFiles())) {
                 if (file.getName().endsWith(".yaml")) {
                     String fileContent = readFromInputStream(new FileInputStream(file));
-                    TransformationsModel transformationsModel = objectMapper.readValue(
+                    ConfigurationModel configurationModel = objectMapper.readValue(
                             fileContent,
-                            TransformationsModel.class);
-                    this.connections.addAll(transformationsModel.getConnections());
-                    this.transformations.addAll(transformationsModel.getTransformations());
+                            ConfigurationModel.class);
+                    this.configurations.add(configurationModel);
                 }
             }
         } catch (IOException e) {

@@ -46,7 +46,7 @@ public class ConnectionModel {
 
     private String password;
 
-    private SslModel ssl;
+    private SslModel ssl = new SslModel();
 
     @EqualsAndHashCode.Exclude
     private Boolean reconnect = false;

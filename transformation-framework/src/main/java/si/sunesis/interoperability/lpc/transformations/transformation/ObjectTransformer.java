@@ -133,7 +133,7 @@ public class ObjectTransformer {
                 JSONMapper jsonMapper = new JSONMapper(modbusModel.getPath(), modbusModel.getType(), modbusModel.getValues(), modbusModel.getPattern());
                 String value = jsonMapper.getMappedValueJSON(jsonNode);
 
-                log.info("Added value for register: {} with value: {}", modbusModel.getAddress(), value);
+                log.debug("Added value for register: {} with value: {}", modbusModel.getAddress(), value);
 
                 result.put(modbusModel.getAddress(), Long.parseLong(value));
             }

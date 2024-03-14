@@ -20,24 +20,16 @@
  */
 package si.sunesis.interoperability.lpc.transformations.configuration.models;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.kumuluz.ee.configuration.cdi.ConfigValue;
 import lombok.Data;
-
-import javax.enterprise.context.ApplicationScoped;
-import java.util.List;
 
 /**
  * @author David Trafela, Sunesis
  * @since 1.0.0
  */
 @Data
-@ApplicationScoped
-public class TransformationsModel {
+public class IntervalRequestModel {
 
-    @JsonProperty("transformations")
-    private List<TransformationModel> transformations;
+    private Integer interval;
 
-    @JsonProperty("connections")
-    private List<ConnectionModel> connections;
+    private MessageModel request;
 }

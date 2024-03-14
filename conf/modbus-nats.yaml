@@ -1,9 +1,12 @@
 connections:
-  - name: NATS-connection
-    type: NATS
-    host: nats://localhost
-    port: 4222
-    reconnect: true
+  - name: MQTT-connection
+    type: MQTT
+    ssl:
+      default: true
+    host: 37aad5450fca492297d7d3bc3329f4ba.s2.eu.hivemq.cloud
+    port: 8883
+    username: lpc-user
+    password: zv.NaiixwWZ7wCC
   - name: Modbus-connection
     type: Modbus
     host: localhost
@@ -14,14 +17,13 @@ transformations:
     connections:
       incoming-connection:
         - Modbus-connection
-      modbus-function-code: 3
-      modbus-device-id: 1
       outgoing-connection:
-        - NATS-connection
+        - MQTT-connection
       outgoing-topic: event/myevent
       outgoing-format: JSON
     to-outgoing:
-      '{
+      to-topic: event/myevent
+      message: '{
             "creationTime": $timestamp,
             "eventStatus": {
                 "currentStatus": {
@@ -45,3 +47,20 @@ transformations:
               }
             }
         '
+    to-incoming:
+      modbus-function-code: 6
+      modbus-device-id: 1
+      modbus-registers:
+        - address: 41000
+          type: integer
+          path: /interval/duration
+    interval-request:
+      interval: 2000 # in milliseconds
+      request:
+        modbus-function-code: 3
+        modbus-device-id: 1
+        modbus-registers:
+          - address: 31000
+            type: integer
+          - address: 32000
+            type: integer

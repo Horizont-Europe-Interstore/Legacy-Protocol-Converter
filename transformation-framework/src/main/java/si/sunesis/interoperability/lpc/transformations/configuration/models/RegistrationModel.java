@@ -21,21 +21,21 @@
 package si.sunesis.interoperability.lpc.transformations.configuration.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.kumuluz.ee.configuration.cdi.ConfigValue;
 import lombok.Data;
 
- 
+import java.util.List;
+
+/**
+ * @author David Trafela, Sunesis
+ * @since 1.0.0
+ */
 @Data
-public class ModbusModel {
+public class RegistrationModel {
 
-    @JsonProperty("register-address")
-    private Integer address;
+    private String topic;
 
-    private String path;
+    private String message;
 
-    private String type;
-
-    private String pattern;
-
-    private String[] values;
+    @JsonProperty("outgoing-connection")
+    private List<String> outgoingConnections;
 }

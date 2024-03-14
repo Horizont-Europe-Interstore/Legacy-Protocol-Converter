@@ -20,7 +20,8 @@ transformations:
       outgoing-topic: event/myevent
       outgoing-format: JSON
     to-outgoing:
-      '{
+      to-topic: event/myevent
+      message: '{
             "creationTime": $timestamp,
             "eventStatus": {
                 "currentStatus": {

@@ -132,6 +132,10 @@ public abstract class AbstractMapper {
     }
 
     public String getMappedValueModbus(Map<Integer, Object> modbusInput) {
+        if (!modbusInput.containsKey(Integer.parseInt(getPath()))) {
+            return null;
+        }
+
         Object value = modbusInput.get(Integer.parseInt(getPath()));
 
         if (value instanceof Double d) {
@@ -152,7 +156,7 @@ public abstract class AbstractMapper {
         if (getValues() != null && getValues().length > 0) {
             if (getType().toLowerCase().contains("int")) {
                 if (isNumber(cleanedValue)) {
-                    return "\"" + getValues()[Integer.parseInt(cleanedValue)] + "\"";
+                    return getValues()[Integer.parseInt(cleanedValue)];
                 }
                 for (int iii = 0; iii < getValues().length; iii++) {
                     if (getValues()[iii].equalsIgnoreCase(cleanedValue.trim())) {
@@ -160,7 +164,17 @@ public abstract class AbstractMapper {
                     }
                 }
             } else if (getType().toLowerCase().contains("str")) {
-                return "\"" + getValues()[Integer.parseInt(cleanedValue)] + "\"";
+                if (isNumber(cleanedValue)) {
+                    return "\"" + getValues()[Integer.parseInt(cleanedValue)] + "\"";
+                }
+
+                for (int iii = 0; iii < getValues().length; iii++) {
+                    if (getValues()[iii].equalsIgnoreCase(cleanedValue.trim())) {
+                        return "\"" + iii + "\"";
+                    }
+                }
+
+                return null;
             }
         } else if (getPattern() != null && (getType().equalsIgnoreCase("date") || getType().equalsIgnoreCase("datetime"))) {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat(getPattern());

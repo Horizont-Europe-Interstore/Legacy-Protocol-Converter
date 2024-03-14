@@ -20,13 +20,8 @@
  */
 package si.sunesis.interoperability.lpc.transformations;
 
-import com.intelligt.modbus.jlibmodbus.exception.ModbusNumberException;
 import lombok.extern.slf4j.Slf4j;
-import si.sunesis.interoperability.lpc.transformations.configuration.Configuration;
-import si.sunesis.interoperability.lpc.transformations.configuration.models.TransformationModel;
-import si.sunesis.interoperability.lpc.transformations.connections.Connections;
-import si.sunesis.interoperability.lpc.transformations.transformation.ObjectTransformer;
-import si.sunesis.interoperability.lpc.transformations.transformation.TransformationHandler;
+import si.sunesis.interoperability.lpc.transformations.transformation.TransformationsHandler;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.context.Initialized;
@@ -41,31 +36,15 @@ import javax.inject.Inject;
 @ApplicationScoped
 public class RunApp {
 
-    private final Configuration configuration;
-
-    private final ObjectTransformer objectTransformer;
-
-    private final Connections connections;
+    private final TransformationsHandler handler;
 
     @Inject
-    private RunApp(Configuration configuration,
-                   ObjectTransformer objectTransformer,
-                   Connections connections) {
-        this.configuration = configuration;
-        this.objectTransformer = objectTransformer;
-        this.connections = connections;
+    private RunApp(TransformationsHandler handler) {
+        this.handler = handler;
     }
 
     private void begin(@Observes @Initialized(ApplicationScoped.class) Object init) {
-        for (TransformationModel transformationModel : configuration.getTransformations()) {
-            TransformationHandler handler = new TransformationHandler(transformationModel, objectTransformer, connections);
-            try {
-                handler.handleConnections();
-                handler.handleOutgoingTransformations();
-                handler.handleIncomingTransformations();
-            } catch (Exception e) {
-                log.error("Error handling connections", e);
-            }
-        }
+        log.debug("Starting application");
+        handler.handleTransformations();
     }
 }
