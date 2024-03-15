@@ -32,6 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.MessageModel;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ModbusModel;
 
+import javax.enterprise.context.ApplicationScoped;
 import java.util.Map;
 
 /**
@@ -39,6 +40,7 @@ import java.util.Map;
  * @since 1.0.0
  */
 @Slf4j
+@ApplicationScoped
 public class ModbusHandler {
 
     private ModbusHandler() {
@@ -99,6 +101,12 @@ public class ModbusHandler {
         if (response.getFunction() != messageModel.getFunctionCode()) {
             log.warn("Function code mismatch! Response: {}, message model: {}", response.getFunction(), messageModel.getFunctionCode());
             return;
+        }
+
+        log.info("Response function code: {}", response.getFunction());
+
+        if(response.getModbusExceptionCode() != null){
+            log.info("Modbus exception code: {}", response.getModbusExceptionCode());
         }
 
         switch (ModbusFunctionCode.get(messageModel.getFunctionCode())) {

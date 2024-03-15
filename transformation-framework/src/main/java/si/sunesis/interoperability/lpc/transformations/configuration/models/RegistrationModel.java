@@ -23,6 +23,7 @@ package si.sunesis.interoperability.lpc.transformations.configuration.models;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -37,5 +38,5 @@ public class RegistrationModel {
     private String message;
 
     @JsonProperty("outgoing-connection")
-    private List<String> outgoingConnections;
+    private List<String> outgoingConnections = new ArrayList<>();
 }

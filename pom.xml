@@ -26,6 +26,8 @@
 
         <jakarta-xml.bind-api.version>4.0.0</jakarta-xml.bind-api.version>
         <jaxb-impl.version>4.0.3</jaxb-impl.version>
+
+        <jserialcomm.version>2.10.4</jserialcomm.version>
     </properties>
 
     <dependencies>
@@ -96,6 +98,13 @@
                 <artifactId>jaxb-impl</artifactId>
                 <version>${jaxb-impl.version}</version>
                 <scope>runtime</scope>
+            </dependency>
+
+            <!-- Modbus serial communication -->
+            <dependency>
+                <groupId>com.fazecast</groupId>
+                <artifactId>jSerialComm</artifactId>
+                <version>${jserialcomm.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

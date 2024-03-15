@@ -39,6 +39,8 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author David Trafela, Sunesis
@@ -104,8 +106,11 @@ public class TransformationHandler {
     private void handleOutgoingTransformations() {
         if (transformation.getToOutgoing() != null) {
             log.debug("Incoming connections: {}", incomingConnections);
+            String incomingTopic = transformation.getConnections().getIncomingTopic();
+            incomingTopic = replacePlaceholders(incomingTopic);
+
             for (RequestHandler incomingConnection : incomingConnections) {
-                incomingConnection.subscribe(transformation.getConnections().getIncomingTopic(), message -> {
+                incomingConnection.subscribe(incomingTopic, message -> {
                     String msg = new String((byte[]) message);
                     log.debug("Incoming message from device: \n{}", msg);
 
@@ -115,8 +120,11 @@ public class TransformationHandler {
                             transformation.getConnections().getOutgoingFormat());
                     log.debug("Transformed message: \n{}", transformedMessage);
 
+                    String toTopic = transformation.getToOutgoing().getToTopic();
+                    toTopic = replacePlaceholders(toTopic);
+
                     sendMessage(transformedMessage,
-                            transformation.getToOutgoing().getToTopic(),
+                            toTopic,
                             outgoingConnections,
                             transformation.getToOutgoing().getRetryCount());
                 });
@@ -129,8 +137,11 @@ public class TransformationHandler {
 
         if (transformation.getToIncoming() != null) {
             if (transformation.getToIncoming().getToTopic() != null) {
+                String outgoingTopic = transformation.getConnections().getOutgoingTopic();
+                outgoingTopic = replacePlaceholders(outgoingTopic);
+
                 for (RequestHandler outgoingConnection : outgoingConnections) {
-                    outgoingConnection.subscribe(transformation.getConnections().getOutgoingTopic(), message -> {
+                    outgoingConnection.subscribe(outgoingTopic, message -> {
                         String msg = new String((byte[]) message);
                         log.debug("Incoming message from server: \n{}", msg);
 
@@ -140,8 +151,11 @@ public class TransformationHandler {
                                 transformation.getConnections().getIncomingFormat());
                         log.debug("Transformed message: \n{}", transformedMessage);
 
+                        String toTopic = transformation.getToIncoming().getToTopic();
+                        toTopic = replacePlaceholders(toTopic);
+
                         sendMessage(transformedMessage,
-                                transformation.getToIncoming().getToTopic(),
+                                toTopic,
                                 incomingConnections,
                                 transformation.getToIncoming().getRetryCount());
                     });
@@ -152,8 +166,11 @@ public class TransformationHandler {
 
                 MessageModel messageModel = transformation.getToIncoming();
 
+                String outgoingTopic = transformation.getConnections().getOutgoingTopic();
+                outgoingTopic = replacePlaceholders(outgoingTopic);
+
                 for (RequestHandler outgoingConnection : outgoingConnections) {
-                    outgoingConnection.subscribe(transformation.getConnections().getOutgoingTopic(), message -> {
+                    outgoingConnection.subscribe(outgoingTopic, message -> {
                         String msg = new String((byte[]) message);
                         log.debug("Incoming message from server for modbus: {}", msg);
                         try {
@@ -203,6 +220,7 @@ public class TransformationHandler {
         for (ModbusModel modbusModel : transformation.getToIncoming().getModbusRegisters()) {
             ModbusRequest[] request = new ModbusRequest[1];
             try {
+                log.info("Building modbus request...");
                 request[0] = ModbusHandler.buildModbusRequest(msgToRegisterMap, modbusModel, messageModel);
                 modbusClient.requestReply(request[0], String.valueOf(transformation.getToIncoming().getDeviceId()), msg -> {
                     try {
@@ -256,7 +274,8 @@ public class TransformationHandler {
 
     private void handleInterval() {
         String fromTopic = transformation.getIntervalRequest().getRequest().getFromTopic();
-        String toTopic = transformation.getToOutgoing().getToTopic();
+        fromTopic = replacePlaceholders(fromTopic);
+
         for (RequestHandler requestHandler : incomingConnections) {
             requestHandler.subscribe(fromTopic, message -> {
                 String msg = new String((byte[]) message);
@@ -267,6 +286,9 @@ public class TransformationHandler {
                         transformation.getConnections().getIncomingFormat(),
                         transformation.getConnections().getOutgoingFormat());
                 log.debug("Transformed message: \n{}", transformedMessage);
+
+                String toTopic = transformation.getToOutgoing().getToTopic();
+                toTopic = replacePlaceholders(toTopic);
 
                 sendMessage(transformedMessage,
                         toTopic,
@@ -283,8 +305,11 @@ public class TransformationHandler {
                     log.debug("Publishing interval request");
                     String message = transformation.getIntervalRequest().getRequest().getMessage();
 
+                    String toTopic = transformation.getIntervalRequest().getRequest().getToTopic();
+                    toTopic = replacePlaceholders(toTopic);
+
                     sendMessage(message,
-                            transformation.getIntervalRequest().getRequest().getToTopic(),
+                            toTopic,
                             Collections.singletonList(requestHandler),
                             transformation.getIntervalRequest().getRequest().getRetryCount());
                 } catch (Exception e) {
@@ -307,16 +332,17 @@ public class TransformationHandler {
             ScheduledExecutorService executorService = Executors
                     .newSingleThreadScheduledExecutor();
             executorService.scheduleAtFixedRate(() -> {
+                log.info("Publishing Modbus interval request");
                 MessageModel messageModel = transformation.getIntervalRequest().getRequest();
                 sendModbusRequest(modbusClient, Collections.emptyMap(), registerMap, messageModel);
             }, interval, interval, TimeUnit.MILLISECONDS);
         }
     }
 
-    protected void buildModbusRequests(String message,
-                                       List<ModbusClient> incomingModbusConnections,
-                                       List<RequestHandler> outgoingConnections,
-                                       MessageModel messageModel) throws ModbusNumberException, ParseException {
+    private void buildModbusRequests(String message,
+                                     List<ModbusClient> incomingModbusConnections,
+                                     List<RequestHandler> outgoingConnections,
+                                     MessageModel messageModel) throws ModbusNumberException, ParseException {
         Map<Integer, Long> msgToRegisterMap =
                 objectTransformer.transformToModbus(transformation.getToIncoming().getModbusRegisters(),
                         message,
@@ -338,11 +364,35 @@ public class TransformationHandler {
                         transformation.getConnections().getOutgoingFormat());
                 log.debug("Transformed message: {}", transformedMessage);
 
+                String toTopic = transformation.getToOutgoing().getToTopic();
+                toTopic = replacePlaceholders(toTopic);
+
                 sendMessage(transformedMessage,
-                        transformation.getToOutgoing().getToTopic(),
+                        toTopic,
                         outgoingConnections,
                         transformation.getToOutgoing().getRetryCount());
             }
         }
+    }
+
+    private String replacePlaceholders(String topic) {
+        Pattern pattern = Pattern.compile("\\{(.*?)}");
+        Matcher matcher = pattern.matcher(topic);
+        StringBuilder sb = new StringBuilder();
+        while (matcher.find()) {
+            // Get the value inside the curly braces
+            String found = matcher.group(1);
+
+            String value = System.getenv(found);
+
+            if (value == null) {
+                value = System.getProperty(found, "#");
+            }
+
+            // Replace the found value with the replacement string
+            matcher.appendReplacement(sb, value);
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
     }
 }

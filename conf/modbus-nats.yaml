@@ -51,7 +51,7 @@ transformations:
       modbus-function-code: 6
       modbus-device-id: 1
       modbus-registers:
-        - address: 41000
+        - register-address: 41000
           type: integer
           path: /interval/duration
     interval-request:
@@ -60,7 +60,7 @@ transformations:
         modbus-function-code: 3
         modbus-device-id: 1
         modbus-registers:
-          - address: 31000
+          - register-address: 31000
             type: integer
-          - address: 32000
+          - register-address: 32000
             type: integer

@@ -335,7 +335,7 @@ public class Connections {
             return new ModbusClient(ModbusMasterFactory.createModbusMasterTCP(tcpParameters));
         } else {
             // Serial client
-            SerialUtils.setSerialPortFactory(new SerialPortFactoryLoopback(true));
+            SerialUtils.setSerialPortFactory(new SerialPortFactoryJSerialComm());
             SerialParameters serialParameters = getSerialParameters(connectionModel);
 
             return new ModbusClient(ModbusMasterFactory.createModbusMasterRTU(serialParameters));

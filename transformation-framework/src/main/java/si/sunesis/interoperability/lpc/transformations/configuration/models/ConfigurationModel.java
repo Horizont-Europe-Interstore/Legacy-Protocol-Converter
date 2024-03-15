@@ -23,7 +23,7 @@ package si.sunesis.interoperability.lpc.transformations.configuration.models;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
-import javax.enterprise.context.ApplicationScoped;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -31,14 +31,13 @@ import java.util.List;
  * @since 1.0.0
  */
 @Data
-@ApplicationScoped
 public class ConfigurationModel {
 
     @JsonProperty("transformations")
-    private List<TransformationModel> transformations;
+    private List<TransformationModel> transformations = new ArrayList<>();
 
     @JsonProperty("connections")
-    private List<ConnectionModel> connections;
+    private List<ConnectionModel> connections = new ArrayList<>();
 
-    private RegistrationModel registration;
+    private RegistrationModel registration = new RegistrationModel();
 }
