@@ -71,6 +71,7 @@ connections:
       default: true/false
     username: string
     password: string
+    version: 3/5
     virtual-host: string
     exchange-name: string
     routing-key: string
@@ -110,7 +111,7 @@ transformations:
 #### MQTT
 
 Currently supported parameters for connection with MQTT are **host**,
-**port**, **ssl**, **username**, **password** and **reconnect**.
+**port**, **ssl**, **version**, **username**, **password** and **reconnect**.
 
 Example of configuration for MQTT:
 
@@ -122,6 +123,7 @@ connections:
     port: 8883
     ssl:
       default: true
+    version: 3
     username: username
     password: password
     reconnect: false
