@@ -82,8 +82,7 @@ connections:
     data-bits: integer
     parity: none/even/odd/space/mark
     stop-bits: integer
-transformations:
-  -...
+...
 ```
 
 **name** and **type** are required keys.
@@ -104,8 +103,7 @@ connections:
     username: userTest
     password: testUser
     reconnect: true
-transformations:
-  -...
+...
 ```
 
 #### MQTT
@@ -127,8 +125,7 @@ connections:
     username: username
     password: password
     reconnect: false
-transformations:
-  -...
+...
 ```
 
 #### RabbitMQ
@@ -152,8 +149,7 @@ connections:
     exchange-name: exchange
     routing-key: key
     exchange-type: direct
-transformations:
-  -...
+...
 ```
 
 #### Modbus
@@ -176,8 +172,7 @@ connections:
     baud-rate: 115200
     data-bits: 8
     parity: none
-transformations:
-  -...
+...
 ```
 
 Example of configuration for TCP Modbus connection:
@@ -188,8 +183,7 @@ connections:
     type: Modbus
     host: localhost
     port: 502
-transformations:
-  -...
+..
 ```
 
 ### Registration
@@ -221,7 +215,7 @@ registration:
   outgoing-connection:
     - NATS-connection
   message: '
-  {
+    {
       "status": "online"
     }
   '
