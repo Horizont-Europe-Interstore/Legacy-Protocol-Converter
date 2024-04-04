@@ -81,14 +81,25 @@ public class Connections {
                 .flatMap(item -> item.getConnections().stream())
                 .toList();
 
+        Map<ConnectionModel, RequestHandler> clientMap = new HashMap<>();
+
         log.debug("Found {} connections", yamlConnections.size());
         for (ConnectionModel connection : yamlConnections) {
+            RequestHandler requestHandler = clientMap.get(connection);
+
+            if (requestHandler != null) {
+                log.info("Connection {} already exists", connection.getName());
+                this.connectionsMap.put(connection.getName(), requestHandler);
+                continue;
+            }
+
             if (connection.getType().equalsIgnoreCase("NATS")) {
                 NatsConnection client;
                 try {
                     client = buildNatsClient(connection);
-                    NatsRequestHandler requestHandler = new NatsRequestHandler(client);
-                    this.connectionsMap.put(connection.getName(), requestHandler);
+                    NatsRequestHandler natsRequestHandler = new NatsRequestHandler(client);
+                    this.connectionsMap.put(connection.getName(), natsRequestHandler);
+                    clientMap.put(connection, natsRequestHandler);
                 } catch (InterruptedException | IOException e) {
                     log.error("Error building NATS client", e);
                 }
@@ -96,8 +107,11 @@ public class Connections {
                 if (connection.getVersion() == 3) {
                     Mqtt3Client client = buildMqtt3Client(connection);
                     this.connectionsMap.put(connection.getName(), client);
+                    clientMap.put(connection, client);
                 } else if (connection.getVersion() == 5) {
-                    this.connectionsMap.put(connection.getName(), buildMqtt5Client(connection));
+                    Mqtt5Client client = buildMqtt5Client(connection);
+                    this.connectionsMap.put(connection.getName(), client);
+                    clientMap.put(connection, client);
                 }
             } else if (connection.getType().equalsIgnoreCase("modbus")) {
                 if (connection.getHost() == null && connection.getDevice() == null) {
@@ -106,7 +120,9 @@ public class Connections {
 
                 try {
                     Modbus.setLogLevel(Modbus.LogLevel.LEVEL_DEBUG);
-                    this.connectionsMap.put(connection.getName(), buildModbusClient(connection));
+                    ModbusClient client = buildModbusClient(connection);
+                    this.connectionsMap.put(connection.getName(), client);
+                    clientMap.put(connection, client);
                 } catch (UnknownHostException | SerialPortException e) {
                     log.error("Error building Modbus client", e);
                 }
@@ -115,6 +131,7 @@ public class Connections {
                 try {
                     client = buildRabbitMQClient(connection);
                     this.connectionsMap.put(connection.getName(), client);
+                    clientMap.put(connection, client);
                 } catch (IOException | TimeoutException e) {
                     log.error("Error building RabbitMQ client", e);
                 }

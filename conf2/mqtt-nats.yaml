@@ -4,7 +4,7 @@ connections:
     host: nats://localhost
     port: 4222
     reconnect: true
-  - name: MQTT-connection2
+  - name: MQTT-connection
     type: MQTT
     ssl:
       default: true
@@ -12,12 +12,17 @@ connections:
     port: 8883
     username: lpc-user
     password: zv.NaiixwWZ7wCC
+registration:
+  topic: registration
+  outgoing-connection:
+    - NATS-connection
+  message: '{"registration": "lpc"}'
 transformations:
   - name: XML Status to XML IEEE2030.5 DeviceStatus
     description: Example showing transformation of messages from XML to XML
     connections:
       incoming-connection:
-        - MQTT-connection2
+        - MQTT-connection
       incoming-topic: status
       incoming-format: XML
       outgoing-connection:
