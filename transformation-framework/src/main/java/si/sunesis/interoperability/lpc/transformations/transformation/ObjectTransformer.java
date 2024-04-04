@@ -279,11 +279,12 @@ public class ObjectTransformer {
             transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
             transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
             transformer = transformerFactory.newTransformer();
-            transformer.setOutputProperty(OutputKeys.INDENT, "no");
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
             StringWriter writer = new StringWriter();
             transformer.transform(new DOMSource(document), new StreamResult(writer));
 
             String xmlString = writer.getBuffer().toString();
+            xmlString = xmlString.replace(">\n", ">");
             int index = xmlString.indexOf("?>");
             if (index != -1) {
                 xmlString = xmlString.substring(0, index + 2) + "\n" + xmlString.substring(index + 2);

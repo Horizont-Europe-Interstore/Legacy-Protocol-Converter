@@ -23,6 +23,7 @@ package si.sunesis.interoperability.lpc.transformations.configuration.models;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -47,7 +48,7 @@ public class MessageModel {
     private Integer deviceId;
 
     @JsonProperty("modbus-registers")
-    private List<ModbusModel> modbusRegisters;
+    private List<ModbusModel> modbusRegisters = new ArrayList<>();
 
     @JsonProperty("retry-count")
     private Integer retryCount = 0;

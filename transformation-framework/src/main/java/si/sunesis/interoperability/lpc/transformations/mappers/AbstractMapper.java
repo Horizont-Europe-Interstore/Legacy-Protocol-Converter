@@ -40,6 +40,12 @@ import javax.xml.xpath.XPathFactory;
 import java.io.StringReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalField;
 import java.util.Date;
 import java.util.Map;
 
@@ -177,16 +183,19 @@ public abstract class AbstractMapper {
                 return null;
             }
         } else if (getPattern() != null && (getType().equalsIgnoreCase("date") || getType().equalsIgnoreCase("datetime"))) {
-            SimpleDateFormat simpleDateFormat = new SimpleDateFormat(getPattern());
-            log.debug("Pattern: {}", getPattern());
+            log.info("Pattern: {}", getPattern().replace("\"", "'"));
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(getPattern().replace("\"", "'")).withZone(ZoneId.systemDefault());
 
             if (isNumber(cleanedValue)) {
                 Date date = new Date(Long.parseLong(cleanedValue));
-                return "\"" + simpleDateFormat.format(date) + "\"";
+                LocalDateTime ldt = date.toInstant().atOffset(ZoneOffset.UTC).toLocalDateTime();
+                return "\"" + ldt.format(formatter) + "\"";
             }
 
-            log.debug("Cleaned value: {}", cleanedValue);
-            Date date = simpleDateFormat.parse(cleanedValue);
+            //SimpleDateFormat simpleDateFormat = new SimpleDateFormat(getPattern());
+            log.info("Cleaned value: {}", cleanedValue);
+            log.info("Formatter: {}", formatter.parse(cleanedValue));
+            Date date = new Date(Instant.from(formatter.parse(cleanedValue)).toEpochMilli());
 
             log.debug("Date: {}", date);
 

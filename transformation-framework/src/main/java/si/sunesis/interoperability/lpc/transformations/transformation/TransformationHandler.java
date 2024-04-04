@@ -24,7 +24,6 @@ import com.intelligt.modbus.jlibmodbus.exception.IllegalDataAddressException;
 import com.intelligt.modbus.jlibmodbus.exception.ModbusIOException;
 import com.intelligt.modbus.jlibmodbus.exception.ModbusNumberException;
 import com.intelligt.modbus.jlibmodbus.msg.base.ModbusRequest;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import si.sunesis.interoperability.common.exceptions.HandlerException;
 import si.sunesis.interoperability.common.interfaces.RequestHandler;
@@ -57,7 +56,6 @@ public class TransformationHandler {
 
     private final List<RequestHandler> incomingConnections = new ArrayList<>();
 
-    @Getter
     private final List<RequestHandler> outgoingConnections = new ArrayList<>();
 
     public TransformationHandler(TransformationModel transformation, ObjectTransformer objectTransformer, Connections connections) {
@@ -82,13 +80,21 @@ public class TransformationHandler {
         String[] incomingConnectionNames = transformation.getConnections().getIncomingConnections();
         String[] outgoingConnectionNames = transformation.getConnections().getOutgoingConnections();
 
-        incomingConnections.addAll(connections.getMqttConnections(incomingConnectionNames).values());
-        incomingConnections.addAll(connections.getNatsConnections(incomingConnectionNames).values());
-        incomingConnections.addAll(connections.getRabbitMQConnections(incomingConnectionNames).values());
+        for (String key : connections.getConnectionsMap().keySet()) {
+            for (String incomingConnectionName : incomingConnectionNames) {
+                if (key.equals(incomingConnectionName)) {
+                    incomingConnections.add(connections.getConnectionsMap().get(key));
+                    break;
+                }
+            }
 
-        outgoingConnections.addAll(connections.getMqttConnections(outgoingConnectionNames).values());
-        outgoingConnections.addAll(connections.getNatsConnections(outgoingConnectionNames).values());
-        outgoingConnections.addAll(connections.getRabbitMQConnections(outgoingConnectionNames).values());
+            for (String outgoingConnectionName : outgoingConnectionNames) {
+                if (key.equals(outgoingConnectionName)) {
+                    outgoingConnections.add(connections.getConnectionsMap().get(key));
+                    break;
+                }
+            }
+        }
 
         if (!connections.getModbusConnections(outgoingConnectionNames).isEmpty()) {
             log.error("Modbus connections are not supported as outgoing connections");
@@ -105,20 +111,19 @@ public class TransformationHandler {
 
     private void handleOutgoingTransformations() {
         if (transformation.getToOutgoing() != null) {
-            log.debug("Incoming connections: {}", incomingConnections);
-            String incomingTopic = transformation.getConnections().getIncomingTopic();
+           String incomingTopic = transformation.getConnections().getIncomingTopic();
             incomingTopic = replacePlaceholders(incomingTopic);
 
             for (RequestHandler incomingConnection : incomingConnections) {
                 incomingConnection.subscribe(incomingTopic, message -> {
                     String msg = new String((byte[]) message);
-                    log.debug("Incoming message from device: \n{}", msg);
+                    log.info("Incoming message from device: \n{}", msg);
 
                     String transformedMessage = objectTransformer.transform(msg,
                             transformation.getToOutgoing().getMessage(),
                             transformation.getConnections().getIncomingFormat(),
                             transformation.getConnections().getOutgoingFormat());
-                    log.debug("Transformed message: \n{}", transformedMessage);
+                    log.info("Transformed message: \n{}", transformedMessage);
 
                     String toTopic = transformation.getToOutgoing().getToTopic();
                     toTopic = replacePlaceholders(toTopic);
@@ -133,8 +138,6 @@ public class TransformationHandler {
     }
 
     private void handleIncomingTransformations() {
-        String[] incomingConnectionNames = transformation.getConnections().getIncomingConnections();
-
         if (transformation.getToIncoming() != null) {
             if (transformation.getToIncoming().getToTopic() != null) {
                 String outgoingTopic = transformation.getConnections().getOutgoingTopic();
@@ -160,7 +163,9 @@ public class TransformationHandler {
                                 transformation.getToIncoming().getRetryCount());
                     });
                 }
-            } else {
+            } else if (transformation.getToIncoming().getModbusRegisters() != null && !transformation.getToIncoming().getModbusRegisters().isEmpty()) {
+                String[] incomingConnectionNames = transformation.getConnections().getIncomingConnections();
+
                 List<ModbusClient> incomingModbusConnections =
                         new ArrayList<>(connections.getModbusConnections(incomingConnectionNames).values());
 
@@ -265,9 +270,11 @@ public class TransformationHandler {
             return;
         }
 
-        if (transformation.getIntervalRequest().getRequest().getToTopic() == null) {
+        if (transformation.getIntervalRequest().getRequest().getToTopic() == null
+                && transformation.getToIncoming().getModbusRegisters() != null
+                && !transformation.getToIncoming().getModbusRegisters().isEmpty()) {
             handleModbusInterval();
-        } else {
+        } else if (transformation.getIntervalRequest().getRequest().getToTopic() != null) {
             handleInterval();
         }
     }
@@ -279,13 +286,13 @@ public class TransformationHandler {
         for (RequestHandler requestHandler : incomingConnections) {
             requestHandler.subscribe(fromTopic, message -> {
                 String msg = new String((byte[]) message);
-                log.debug("Incoming message from device: \n{}", msg);
+                log.info("Incoming message from device: \n{}", msg);
 
                 String transformedMessage = objectTransformer.transform(msg,
                         transformation.getToOutgoing().getMessage(),
                         transformation.getConnections().getIncomingFormat(),
                         transformation.getConnections().getOutgoingFormat());
-                log.debug("Transformed message: \n{}", transformedMessage);
+                log.info("Transformed message: \n{}", transformedMessage);
 
                 String toTopic = transformation.getToOutgoing().getToTopic();
                 toTopic = replacePlaceholders(toTopic);
@@ -299,7 +306,7 @@ public class TransformationHandler {
             Integer interval = transformation.getIntervalRequest().getInterval();
 
             ScheduledExecutorService executorService = Executors
-                    .newSingleThreadScheduledExecutor();
+                    .newScheduledThreadPool(5);
             executorService.scheduleAtFixedRate(() -> {
                 try {
                     log.debug("Publishing interval request");
@@ -376,6 +383,10 @@ public class TransformationHandler {
     }
 
     private String replacePlaceholders(String topic) {
+        if (topic == null) {
+            return null;
+        }
+
         Pattern pattern = Pattern.compile("\\{(.*?)}");
         Matcher matcher = pattern.matcher(topic);
         StringBuilder sb = new StringBuilder();

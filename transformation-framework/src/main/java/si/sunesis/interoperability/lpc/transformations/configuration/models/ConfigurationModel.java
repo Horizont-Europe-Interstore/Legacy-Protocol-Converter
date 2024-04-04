@@ -25,6 +25,7 @@ import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author David Trafela, Sunesis
@@ -32,6 +33,8 @@ import java.util.List;
  */
 @Data
 public class ConfigurationModel {
+
+    private String version = "1.0.0";
 
     @JsonProperty("transformations")
     private List<TransformationModel> transformations = new ArrayList<>();

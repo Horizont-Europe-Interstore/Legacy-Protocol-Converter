@@ -4,7 +4,7 @@ connections:
     host: nats://localhost
     port: 4222
     reconnect: true
-  - name: MQTT-connection
+  - name: MQTT-connection2
     type: MQTT
     ssl:
       default: true
@@ -17,7 +17,7 @@ transformations:
     description: Example showing transformation of messages from XML to JSON
     connections:
       incoming-connection:
-        - MQTT-connection
+        - MQTT-connection2
       incoming-topic: topic1
       incoming-format: XML
       outgoing-connection:

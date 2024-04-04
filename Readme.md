@@ -59,6 +59,7 @@ transformations:
 
 Each incoming/outgoing connection must be configured in the list of connections so the LPC
 knows how to connect.
+
 Possible options for each connection are following:
 
 ```yaml
@@ -183,7 +184,7 @@ connections:
     type: Modbus
     host: localhost
     port: 502
-..
+  ..
 ```
 
 ### Registration
@@ -699,9 +700,61 @@ When deploying, path to the configuration file must be provided either as an arg
 Default path to the configuration folder is ```./conf```.
 In this folder, multiple configuration files can be placed, and LPC will read all of them.
 
+### Configuration of logging
+
+Configuration of logging is done with the help of Log4j library. So for configuring logging,
+one should create file log4j.xml and config logging per
+Log4j [documentation](https://logging.apache.org/log4j/2.x/manual/configuration.html).
+
+Default configuration is following:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration name="kumuluzee">
+    <Appenders>
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
+        </Console>
+
+        <File name="file_debug_app" fileName="logs/debug_app.log">
+            <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
+        </File>
+        <File name="file_info_app" fileName="logs/app.log">
+            <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
+        </File>
+
+        <File name="file_lpc" fileName="logs/lpc.log">
+            <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
+        </File>
+    </Appenders>
+
+    <Loggers>
+        <Root level="debug">
+            <AppenderRef ref="console" level="info"/>
+            <AppenderRef ref="file_info_app" level="info"/>
+            <AppenderRef ref="file_debug_app" level="debug"/>
+        </Root>
+
+        <Logger name="si.sunesis.interoperability" level="debug">
+            <AppenderRef ref="file_lpc"/>
+        </Logger>
+    </Loggers>
+</Configuration>
+```
+
+This will print out logs of level INFO or above in the console and in the file `app.log`.
+This will print out logs of level DEBUG or above in the file `debug_app.log`.
+Separate log file for Legacy Protocol Converter is created in order for easier troubleshooting of LPC at `lpc.log`.
+
+If using different configuration, one should specify the location of the configuration.
+
 ### JAR
 
 Build the JAR: ```mvn clean package```
+
+**OPTIONAL** If using the custom configuration file for the logging,
+then the environment variable with the path to the file must be
+set: `KUMULUZEE_LOGS_CONFIGFILELOCATION=path/to/file/log4j2.xml`
 
 Deploy the application: ```java -jar transformation-framework/target/transformation-framework-1.0-SNAPSHOT.jar```
 
@@ -717,6 +770,12 @@ This will take the configuration files from ```/path/to/config``` folder.
 Build the JAR: ```mvn clean package```
 
 Build the Docker image: ```docker build -t lpc:latest .```
+
+**OPTIONAL** If using the custom configuration file for the logging, then this file must be mounted to the container
+before running it.
+It must be mounted to `/app/log-config/log4j2.xml` like this:
+
+`docker run -v /path/to/log4j2.xml:/app/log-config/log4j2.xml lpc:latest`
 
 Run the Docker container and mount configuration folder: ```docker run -v /path/to/config:/app/conf lpc:latest```
 

@@ -30,7 +30,7 @@ import lombok.Data;
 @Data
 public class TransformationModel {
 
-    private String name;
+    private String name = null;
 
     private String description;
 
