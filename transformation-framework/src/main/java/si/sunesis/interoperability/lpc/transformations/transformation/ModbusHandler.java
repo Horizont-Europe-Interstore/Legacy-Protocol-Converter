@@ -20,6 +20,7 @@
  */
 package si.sunesis.interoperability.lpc.transformations.transformation;
 
+import com.intelligt.modbus.jlibmodbus.Modbus;
 import com.intelligt.modbus.jlibmodbus.exception.IllegalDataAddressException;
 import com.intelligt.modbus.jlibmodbus.exception.ModbusNumberException;
 import com.intelligt.modbus.jlibmodbus.msg.ModbusRequestBuilder;
@@ -50,21 +51,26 @@ public class ModbusHandler {
     protected static ModbusRequest buildModbusRequest(Map<Integer, Long> msgToRegisterMap, ModbusModel modbusModel, MessageModel messageModel) throws ModbusNumberException {
         ModbusRequest request = null;
         ModbusRequestBuilder requestBuilder = ModbusRequestBuilder.getInstance();
+        int quantity = 8;
+
+        while (!Modbus.checkEndAddress(modbusModel.getAddress() + quantity)) {
+            quantity--;
+        }
 
         switch (ModbusFunctionCode.get(messageModel.getFunctionCode())) {
             case READ_COILS -> request = requestBuilder.buildReadCoils(messageModel.getDeviceId(),
                     modbusModel.getAddress(),
-                    1);
+                    quantity);
             case READ_DISCRETE_INPUTS -> request = requestBuilder.buildReadDiscreteInputs(messageModel.getDeviceId(),
                     modbusModel.getAddress(),
-                    1);
+                    quantity);
             case READ_HOLDING_REGISTERS ->
                     request = requestBuilder.buildReadHoldingRegisters(messageModel.getDeviceId(),
                             modbusModel.getAddress(),
-                            1);
+                            quantity);
             case READ_INPUT_REGISTERS -> request = requestBuilder.buildReadInputRegisters(messageModel.getDeviceId(),
                     modbusModel.getAddress(),
-                    1);
+                    quantity);
             case WRITE_SINGLE_COIL -> {
                 boolean value = msgToRegisterMap.containsKey(modbusModel.getAddress()) && msgToRegisterMap.get(modbusModel.getAddress()) == 1;
                 request = requestBuilder.buildWriteSingleCoil(messageModel.getDeviceId(),
@@ -88,7 +94,7 @@ public class ModbusHandler {
             case READ_WRITE_MULTIPLE_REGISTERS ->
                     request = requestBuilder.buildReadWriteMultipleRegisters(messageModel.getDeviceId(),
                             modbusModel.getAddress(),
-                            1,
+                            quantity,
                             modbusModel.getAddress(),
                             new int[]{Math.toIntExact(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0L))});
             default -> log.warn("Function code not supported: {}", messageModel.getFunctionCode());
@@ -105,7 +111,7 @@ public class ModbusHandler {
 
         log.info("Response function code: {}", response.getFunction());
 
-        if(response.getModbusExceptionCode() != null){
+        if (response.getModbusExceptionCode() != null) {
             log.info("Modbus exception code: {}", response.getModbusExceptionCode());
         }
 

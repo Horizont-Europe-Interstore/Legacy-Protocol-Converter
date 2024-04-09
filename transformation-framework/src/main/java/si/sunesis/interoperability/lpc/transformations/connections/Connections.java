@@ -88,7 +88,7 @@ public class Connections {
             RequestHandler requestHandler = clientMap.get(connection);
 
             if (requestHandler != null) {
-                log.info("Connection {} already exists", connection.getName());
+                log.debug("Connection {} already exists under different name", connection.getName());
                 this.connectionsMap.put(connection.getName(), requestHandler);
                 continue;
             }

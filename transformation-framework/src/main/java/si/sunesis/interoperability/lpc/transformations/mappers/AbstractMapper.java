@@ -138,6 +138,8 @@ public abstract class AbstractMapper {
     }
 
     public String getMappedValueModbus(Map<Integer, Object> modbusInput) {
+        setPath(getPath().replace("/", ""));
+
         if (!modbusInput.containsKey(Integer.parseInt(getPath()))) {
             return null;
         }

@@ -28,7 +28,7 @@ transformations:
             "eventStatus": {
                 "currentStatus": {
                   "lpc:mapping": {
-                    "path": "31000",
+                    "path": "32000",
                     "type": "integer",
                     "values": ["scheduled", "active", "cancelled", "cancelled_with_r", "superseded"]
                   }
@@ -39,7 +39,7 @@ transformations:
               "interval": {
                 "duration": {
                   "lpc:mapping": {
-                    "path": "32000",
+                    "path": "32002",
                     "type": "integer"
                   }
                 },
@@ -47,20 +47,13 @@ transformations:
               }
             }
         '
-    to-incoming:
-      modbus-function-code: 6
-      modbus-device-id: 1
-      modbus-registers:
-        - register-address: 41000
-          type: integer
-          path: /interval/duration
     interval-request:
-      interval: 2000 # in milliseconds
+      interval: 3000 # in milliseconds
       request:
         modbus-function-code: 3
         modbus-device-id: 1
         modbus-registers:
-          - register-address: 31000
-            type: integer
           - register-address: 32000
-            type: integer
+            type: integer8
+          - register-address: 32002
+            type: integer8

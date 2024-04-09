@@ -211,6 +211,10 @@ public class ObjectTransformer {
 
             log.debug("path: {}, value: {}", mapper.getPath(), value);
 
+            if(value == null) {
+                value = "null";
+            }
+
             mappingMatcher.appendReplacement(modifiedMapping, value);
         }
         mappingMatcher.appendTail(modifiedMapping);

@@ -24,7 +24,7 @@ public class TestRun {
                 ConfigurationModel.class);
 
         Assert.assertEquals(2, configurationModel.getConnections().size());
-        Assert.assertEquals(1, configurationModel.getTransformations().size());
+        Assert.assertEquals(2, configurationModel.getTransformations().size());
         Assert.assertNull(configurationModel.getTransformations().get(0).getToIncoming());
     }
 
