@@ -227,19 +227,10 @@ public class TransformationHandler {
         for (ModbusModel modbusModel : messageModel.getModbusRegisters()) {
             ModbusRequest[] request = new ModbusRequest[1];
             try {
-                log.info("Building modbus request...");
                 request[0] = ModbusHandler.buildModbusRequest(msgToRegisterMap, modbusModel, messageModel);
-                log.info("Sending modbus request...");
                 modbusClient.requestReply(request[0], String.valueOf(messageModel.getDeviceId()), msg -> {
                     try {
-                        log.info("Handling modbus response...");
-                        ReadHoldingRegistersResponse response = (ReadHoldingRegistersResponse) msg;
-
-                        log.info("Response: {}", response.getHoldingRegisters().get(0));
-
                         ModbusHandler.handleModbusResponse(msg, registerMap, modbusModel, messageModel);
-
-                        log.info("Modbus response handled successfully");
                     } catch (IllegalDataAddressException e) {
                         log.error("Illegal data address", e);
                     }
@@ -252,14 +243,11 @@ public class TransformationHandler {
         }
 
         if (messageModel.getRetryCount() > 0) {
-            log.info("Retrying failed modbus requests");
-
             for (int i = 0; i < messageModel.getRetryCount(); i++) {
-                log.info("Failed requests: {}", failed.size());
+                log.debug("Failed requests: {}", failed.size());
                 for (Map.Entry<ModbusModel, ModbusRequest> entry : failed.entrySet()) {
                     try {
                         log.debug("Retrying to Modbus request...");
-                        log.info("Modbus request: {}", entry.getValue());
 
                         modbusClient.requestReply(entry.getValue(), String.valueOf(messageModel.getDeviceId()), msg -> {
                             try {
@@ -277,8 +265,6 @@ public class TransformationHandler {
                 }
             }
         }
-
-        log.info("Modbus requests finished");
     }
 
     private void handleIntervalRequests() {
@@ -351,7 +337,7 @@ public class TransformationHandler {
         ScheduledExecutorService executorService = Executors
                 .newSingleThreadScheduledExecutor();
         executorService.scheduleAtFixedRate(() -> {
-            log.info("Publishing Modbus interval request");
+            log.debug("Publishing Modbus interval request");
             MessageModel messageModel = transformation.getIntervalRequest().getRequest();
 
             try {

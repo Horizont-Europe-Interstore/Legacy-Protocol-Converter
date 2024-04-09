@@ -39,13 +39,10 @@ import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 import java.io.StringReader;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalField;
 import java.util.Date;
 import java.util.Map;
 
@@ -159,7 +156,7 @@ public abstract class AbstractMapper {
         return null;
     }
 
-    private String getValue(String cleanedValue) throws ParseException {
+    private String getValue(String cleanedValue) {
         cleanedValue = cleanedValue.trim();
         if (getValues() != null && getValues().length > 0) {
             if (getType().toLowerCase().contains("int")) {
@@ -185,21 +182,29 @@ public abstract class AbstractMapper {
                 return null;
             }
         } else if (getPattern() != null && (getType().equalsIgnoreCase("date") || getType().equalsIgnoreCase("datetime"))) {
-            log.info("Pattern: {}", getPattern().replace("\"", "'"));
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(getPattern().replace("\"", "'")).withZone(ZoneId.systemDefault());
+            setPattern(getPattern().replace("\"", "'"));
+            log.debug("Pattern: {}", getPattern());
+            log.debug("Date value to parse: {}", cleanedValue);
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(getPattern());
 
             if (isNumber(cleanedValue)) {
                 Date date = new Date(Long.parseLong(cleanedValue));
-                LocalDateTime ldt = date.toInstant().atOffset(ZoneOffset.UTC).toLocalDateTime();
+                LocalDateTime ldt = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
                 return "\"" + ldt.format(formatter) + "\"";
             }
 
-            //SimpleDateFormat simpleDateFormat = new SimpleDateFormat(getPattern());
-            log.info("Cleaned value: {}", cleanedValue);
-            log.info("Formatter: {}", formatter.parse(cleanedValue));
-            Date date = new Date(Instant.from(formatter.parse(cleanedValue)).toEpochMilli());
+            Date date;
 
-            log.debug("Date: {}", date);
+            if (getPattern().contains("H") || getPattern().contains("h") || getPattern().contains("K") || getPattern().contains("k")) {
+                LocalDateTime ldt = LocalDateTime.parse(cleanedValue, formatter);
+                date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+            } else {
+                LocalDate ld = LocalDate.parse(cleanedValue, formatter);
+                date = Date.from(ld.atStartOfDay(ZoneId.systemDefault()).toInstant());
+            }
+
+            log.debug("Parsed date: {}", date);
 
             return "\"" + date.getTime() + "\"";
         }

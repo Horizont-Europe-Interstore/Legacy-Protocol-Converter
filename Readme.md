@@ -382,7 +382,6 @@ JSON IncomingEvent:
 XML IEEE2030.5 Event:
 
 ```xml
-
 <Event>
     <creationTime>1702909917932</creationTime>
     <EventStatus>
@@ -488,7 +487,6 @@ For showcasing this we will use the example above but IncomingEvent in XML forma
 XML IncomingEvent:
 
 ```xml
-
 <IncomingEvent>
     <datetime>28-08-2023 12:00:35</datetime>
     <status>active</status>

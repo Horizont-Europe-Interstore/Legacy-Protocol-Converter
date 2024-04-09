@@ -109,10 +109,8 @@ public class ModbusHandler {
             return;
         }
 
-        log.info("Response function code: {}", response.getFunction());
-
         if (response.getModbusExceptionCode() != null) {
-            log.info("Modbus exception code: {}", response.getModbusExceptionCode());
+            log.warn("Modbus exception code: {}", response.getModbusExceptionCode());
         }
 
         switch (ModbusFunctionCode.get(messageModel.getFunctionCode())) {
