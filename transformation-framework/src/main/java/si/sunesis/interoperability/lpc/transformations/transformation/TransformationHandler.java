@@ -23,24 +23,25 @@ package si.sunesis.interoperability.lpc.transformations.transformation;
 import com.intelligt.modbus.jlibmodbus.exception.IllegalDataAddressException;
 import com.intelligt.modbus.jlibmodbus.exception.ModbusIOException;
 import com.intelligt.modbus.jlibmodbus.exception.ModbusNumberException;
-import com.intelligt.modbus.jlibmodbus.msg.ModbusRequestBuilder;
 import com.intelligt.modbus.jlibmodbus.msg.base.ModbusRequest;
-import com.intelligt.modbus.jlibmodbus.msg.base.ModbusResponse;
-import com.intelligt.modbus.jlibmodbus.msg.response.ReadCoilsResponse;
 import com.intelligt.modbus.jlibmodbus.msg.response.ReadHoldingRegistersResponse;
-import com.intelligt.modbus.jlibmodbus.utils.ModbusFunctionCode;
 import lombok.extern.slf4j.Slf4j;
+import si.sunesis.interoperability.common.exceptions.HandlerException;
 import si.sunesis.interoperability.common.interfaces.RequestHandler;
+import si.sunesis.interoperability.lpc.transformations.configuration.models.MessageModel;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ModbusModel;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.TransformationModel;
 import si.sunesis.interoperability.lpc.transformations.connections.Connections;
 import si.sunesis.interoperability.modbus.ModbusClient;
 
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author David Trafela, Sunesis
@@ -55,26 +56,47 @@ public class TransformationHandler {
 
     private final TransformationModel transformation;
 
-    private List<RequestHandler> incomingConnections = new ArrayList<>();
-    private List<RequestHandler> outgoingConnections = new ArrayList<>();
+    private final List<RequestHandler> incomingConnections = new ArrayList<>();
+
+    private final List<RequestHandler> outgoingConnections = new ArrayList<>();
 
     public TransformationHandler(TransformationModel transformation, ObjectTransformer objectTransformer, Connections connections) {
         this.transformation = transformation;
         this.objectTransformer = objectTransformer;
         this.connections = connections;
 
-        log.info("Transformation: {}", transformation.getName());
+        log.debug("Transformation: {}", transformation.getName());
     }
 
-    public void handleConnections() {
+    public void handle() {
+        handleConnections();
+        handleOutgoingTransformations();
+        handleIncomingTransformations();
+        handleIntervalRequests();
+    }
+
+    private void handleConnections() {
+        incomingConnections.clear();
+        outgoingConnections.clear();
+
         String[] incomingConnectionNames = transformation.getConnections().getIncomingConnections();
         String[] outgoingConnectionNames = transformation.getConnections().getOutgoingConnections();
 
-        incomingConnections.addAll(connections.getMqttConnections(incomingConnectionNames).values());
-        incomingConnections.addAll(connections.getNatsConnections(incomingConnectionNames).values());
+        for (String key : connections.getConnectionsMap().keySet()) {
+            for (String incomingConnectionName : incomingConnectionNames) {
+                if (key.equals(incomingConnectionName)) {
+                    incomingConnections.add(connections.getConnectionsMap().get(key));
+                    break;
+                }
+            }
 
-        outgoingConnections.addAll(connections.getMqttConnections(outgoingConnectionNames).values());
-        outgoingConnections.addAll(connections.getNatsConnections(outgoingConnectionNames).values());
+            for (String outgoingConnectionName : outgoingConnectionNames) {
+                if (key.equals(outgoingConnectionName)) {
+                    outgoingConnections.add(connections.getConnectionsMap().get(key));
+                    break;
+                }
+            }
+        }
 
         if (!connections.getModbusConnections(outgoingConnectionNames).isEmpty()) {
             log.error("Modbus connections are not supported as outgoing connections");
@@ -82,210 +104,310 @@ public class TransformationHandler {
 
         for (ModbusClient client : connections.getModbusConnections(incomingConnectionNames).values()) {
             try {
-                log.info("Modbus client connect: {}", incomingConnectionNames);
                 client.getClient().connect();
-                log.info("Modbus client: {}", client.getClient().isConnected());
+                log.debug("Modbus client: {}", client.getClient().isConnected());
             } catch (ModbusIOException ignored) {
             }
         }
     }
 
-    public void handleOutgoingTransformations() {
+    private void handleOutgoingTransformations() {
         if (transformation.getToOutgoing() != null) {
-            log.info("Incoming connections: {}", incomingConnections);
+            String incomingTopic = transformation.getConnections().getIncomingTopic();
+            incomingTopic = replacePlaceholders(incomingTopic);
+
             for (RequestHandler incomingConnection : incomingConnections) {
-                incomingConnection.subscribe(transformation.getConnections().getIncomingTopic(), message -> {
+                incomingConnection.subscribe(incomingTopic, message -> {
                     String msg = new String((byte[]) message);
                     log.info("Incoming message from device: \n{}", msg);
 
                     String transformedMessage = objectTransformer.transform(msg,
-                            transformation.getToOutgoing(),
+                            transformation.getToOutgoing().getMessage(),
                             transformation.getConnections().getIncomingFormat(),
                             transformation.getConnections().getOutgoingFormat());
                     log.info("Transformed message: \n{}", transformedMessage);
 
-                    for (RequestHandler outgoingConnection : outgoingConnections) {
-                        outgoingConnection.publish(transformedMessage, transformation.getConnections().getOutgoingTopic());
-                    }
+                    String toTopic = transformation.getToOutgoing().getToTopic();
+                    toTopic = replacePlaceholders(toTopic);
+
+                    sendMessage(transformedMessage,
+                            toTopic,
+                            outgoingConnections,
+                            transformation.getToOutgoing().getRetryCount());
                 });
             }
         }
     }
 
-    public void handleIncomingTransformations() {
-        String[] incomingConnectionNames = transformation.getConnections().getIncomingConnections();
-
+    private void handleIncomingTransformations() {
         if (transformation.getToIncoming() != null) {
-            for (RequestHandler outgoingConnection : outgoingConnections) {
-                outgoingConnection.subscribe(transformation.getConnections().getOutgoingTopic(), message -> {
-                    String msg = new String((byte[]) message);
-                    log.info("Incoming message from server: \n{}", msg);
+            if (transformation.getToIncoming().getToTopic() != null) {
+                String outgoingTopic = transformation.getConnections().getOutgoingTopic();
+                outgoingTopic = replacePlaceholders(outgoingTopic);
 
-                    String transformedMessage = objectTransformer.transform(msg,
-                            transformation.getToIncoming(),
-                            transformation.getConnections().getOutgoingFormat(),
-                            transformation.getConnections().getIncomingFormat());
-                    log.info("Transformed message: \n{}", transformedMessage);
+                for (RequestHandler outgoingConnection : outgoingConnections) {
+                    outgoingConnection.subscribe(outgoingTopic, message -> {
+                        String msg = new String((byte[]) message);
+                        log.debug("Incoming message from server: \n{}", msg);
 
-                    for (RequestHandler incomingConnection : incomingConnections) {
-                        incomingConnection.publish(transformedMessage, transformation.getConnections().getIncomingTopic());
-                    }
-                });
-            }
-        } else if (transformation.getToModbus() != null && !transformation.getToModbus().isEmpty()) {
-            List<ModbusClient> incomingModbusConnections =
-                    new ArrayList<>(connections.getModbusConnections(incomingConnectionNames).values());
+                        String transformedMessage = objectTransformer.transform(msg,
+                                transformation.getToIncoming().getMessage(),
+                                transformation.getConnections().getOutgoingFormat(),
+                                transformation.getConnections().getIncomingFormat());
+                        log.debug("Transformed message: \n{}", transformedMessage);
 
-            for (RequestHandler outgoingConnection : outgoingConnections) {
-                outgoingConnection.subscribe(transformation.getConnections().getOutgoingTopic(), message -> {
-                    String msg = new String((byte[]) message);
-                    log.info("Incoming message from server for modbus: {}", msg);
+                        String toTopic = transformation.getToIncoming().getToTopic();
+                        toTopic = replacePlaceholders(toTopic);
 
-                    try {
-                        buildModbusRequests(msg, incomingModbusConnections, outgoingConnections);
-                    } catch (ModbusNumberException | ParseException e) {
-                        log.error("Error building modbus requests", e);
-                    }
-                });
+                        sendMessage(transformedMessage,
+                                toTopic,
+                                incomingConnections,
+                                transformation.getToIncoming().getRetryCount());
+                    });
+                }
+            } else if (transformation.getToIncoming().getModbusRegisters() != null && !transformation.getToIncoming().getModbusRegisters().isEmpty()) {
+                String[] incomingConnectionNames = transformation.getConnections().getIncomingConnections();
+
+                List<ModbusClient> incomingModbusConnections =
+                        new ArrayList<>(connections.getModbusConnections(incomingConnectionNames).values());
+
+                MessageModel messageModel = transformation.getToIncoming();
+
+                String outgoingTopic = transformation.getConnections().getOutgoingTopic();
+                outgoingTopic = replacePlaceholders(outgoingTopic);
+
+                for (RequestHandler outgoingConnection : outgoingConnections) {
+                    outgoingConnection.subscribe(outgoingTopic, message -> {
+                        String msg = new String((byte[]) message);
+                        log.debug("Incoming message from server for modbus: {}", msg);
+                        try {
+                            buildModbusRequests(msg, incomingModbusConnections, outgoingConnections, messageModel);
+                        } catch (ModbusNumberException | ParseException e) {
+                            log.error("Error building modbus requests", e);
+                        }
+                    });
+                }
             }
         }
     }
 
-    private void buildModbusRequests(String message,
-                                     List<ModbusClient> incomingModbusConnections,
-                                     List<RequestHandler> outgoingConnections) throws ModbusNumberException, ParseException {
-        Map<Integer, Long> msgToRegisterMap = objectTransformer.transformToModbus(transformation.getToModbus(), message, transformation.getConnections().getOutgoingFormat());
+    private void sendMessage(String message, String topic, List<RequestHandler> connections, int retryCount) {
+        Map<RequestHandler, String[]> failed = new HashMap<>();
 
-        log.info("Message to register map: {}", msgToRegisterMap);
+        for (RequestHandler connection : connections) {
+            try {
+                connection.publish(message, topic);
+            } catch (HandlerException e) {
+                log.error("Error publishing outgoing message", e);
+                failed.put(connection, new String[]{message, topic});
+            }
+        }
 
-        for (ModbusClient modbusClient : incomingModbusConnections) {
-            HashMap<Integer, Object> registerMap = new HashMap<>();
-
-            for (ModbusModel modbusModel : transformation.getToModbus()) {
-                ModbusRequest request = buildModbusRequest(msgToRegisterMap, modbusModel);
-
-                modbusClient.requestReply(request, String.valueOf(transformation.getConnections().getModbusDeviceID()), msg -> {
+        if (retryCount > 0) {
+            for (int i = 0; i < retryCount; i++) {
+                for (Map.Entry<RequestHandler, String[]> entry : failed.entrySet()) {
                     try {
-                        handleModbusResponse(msg, registerMap, modbusModel);
+                        log.debug("Retrying to publish message");
+                        entry.getKey().publish(entry.getValue()[0], entry.getValue()[1]);
+                        failed.remove(entry.getKey());
+                    } catch (HandlerException e) {
+                        log.error("Error publishing failed message", e);
+                    }
+                }
+            }
+        }
+    }
+
+    private void sendModbusRequest(ModbusClient modbusClient,
+                                   Map<Integer, Long> msgToRegisterMap,
+                                   Map<Integer, Object> registerMap,
+                                   MessageModel messageModel) {
+        Map<ModbusModel, ModbusRequest> failed = new HashMap<>();
+
+        for (ModbusModel modbusModel : messageModel.getModbusRegisters()) {
+            ModbusRequest[] request = new ModbusRequest[1];
+            try {
+                request[0] = ModbusHandler.buildModbusRequest(msgToRegisterMap, modbusModel, messageModel);
+                modbusClient.requestReply(request[0], String.valueOf(messageModel.getDeviceId()), msg -> {
+                    try {
+                        ModbusHandler.handleModbusResponse(msg, registerMap, modbusModel, messageModel);
                     } catch (IllegalDataAddressException e) {
                         log.error("Illegal data address", e);
                     }
                 });
+            } catch (HandlerException e) {
+                failed.put(modbusModel, request[0]);
+            } catch (ModbusNumberException e) {
+                log.error("Error building modbus request", e);
             }
+        }
 
-            if (transformation.getToOutgoing() != null) {
-                log.info("Registers: {}", registerMap);
+        if (messageModel.getRetryCount() > 0) {
+            for (int i = 0; i < messageModel.getRetryCount(); i++) {
+                log.debug("Failed requests: {}", failed.size());
+                for (Map.Entry<ModbusModel, ModbusRequest> entry : failed.entrySet()) {
+                    try {
+                        log.debug("Retrying to Modbus request...");
 
-                String transformedMessage = objectTransformer.transform(registerMap,
-                        transformation.getToOutgoing(),
+                        modbusClient.requestReply(entry.getValue(), String.valueOf(messageModel.getDeviceId()), msg -> {
+                            try {
+                                ModbusHandler.handleModbusResponse(msg, registerMap, entry.getKey(), messageModel);
+                                failed.remove(entry.getKey());
+                            } catch (IllegalDataAddressException e) {
+                                log.error("Illegal data address", e);
+                            }
+                        });
+
+                        failed.remove(entry.getKey());
+                    } catch (HandlerException e) {
+                        log.error("Error handling modbus request", e);
+                    }
+                }
+            }
+        }
+    }
+
+    private void handleIntervalRequests() {
+        if (transformation.getIntervalRequest() == null) {
+            return;
+        }
+
+        if (transformation.getIntervalRequest().getRequest().getToTopic() == null
+                && !transformation.getIntervalRequest().getRequest().getModbusRegisters().isEmpty()) {
+            handleModbusInterval();
+        } else if (transformation.getIntervalRequest().getRequest().getToTopic() != null) {
+            handleInterval();
+        }
+    }
+
+    private void handleInterval() {
+        String fromTopic = transformation.getIntervalRequest().getRequest().getFromTopic();
+        fromTopic = replacePlaceholders(fromTopic);
+
+        for (RequestHandler requestHandler : incomingConnections) {
+            requestHandler.subscribe(fromTopic, message -> {
+                String msg = new String((byte[]) message);
+                log.info("Incoming message from device: \n{}", msg);
+
+                String transformedMessage = objectTransformer.transform(msg,
+                        transformation.getToOutgoing().getMessage(),
                         transformation.getConnections().getIncomingFormat(),
                         transformation.getConnections().getOutgoingFormat());
-                log.info("Transformed message: {}", transformedMessage);
+                log.info("Transformed message: \n{}", transformedMessage);
 
-                for (RequestHandler outgoingConnection : outgoingConnections) {
-                    outgoingConnection.publish(transformedMessage, transformation.getConnections().getIncomingTopic());
+                String toTopic = transformation.getToOutgoing().getToTopic();
+                toTopic = replacePlaceholders(toTopic);
+
+                sendMessage(transformedMessage,
+                        toTopic,
+                        outgoingConnections,
+                        transformation.getToOutgoing().getRetryCount());
+            });
+
+            Integer interval = transformation.getIntervalRequest().getInterval();
+
+            ScheduledExecutorService executorService = Executors
+                    .newScheduledThreadPool(5);
+            executorService.scheduleAtFixedRate(() -> {
+                try {
+                    log.debug("Publishing interval request");
+                    String message = transformation.getIntervalRequest().getRequest().getMessage();
+
+                    String toTopic = transformation.getIntervalRequest().getRequest().getToTopic();
+                    toTopic = replacePlaceholders(toTopic);
+
+                    sendMessage(message,
+                            toTopic,
+                            Collections.singletonList(requestHandler),
+                            transformation.getIntervalRequest().getRequest().getRetryCount());
+                } catch (Exception e) {
+                    log.error("Error publishing interval request", e);
                 }
+            }, interval, interval, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    private void handleModbusInterval() {
+        // Modbus request
+        List<ModbusClient> incomingModbusConnections =
+                new ArrayList<>(connections.getModbusConnections(transformation.getConnections().getIncomingConnections()).values());
+
+        Integer interval = transformation.getIntervalRequest().getInterval();
+
+        ScheduledExecutorService executorService = Executors
+                .newSingleThreadScheduledExecutor();
+        executorService.scheduleAtFixedRate(() -> {
+            log.debug("Publishing Modbus interval request");
+            MessageModel messageModel = transformation.getIntervalRequest().getRequest();
+
+            try {
+                buildModbusRequests(null, incomingModbusConnections, outgoingConnections, messageModel);
+            } catch (ModbusNumberException e) {
+                log.error("Error building modbus requests", e);
+            } catch (ParseException e) {
+                log.error("Error parsing message", e);
+            }
+        }, interval, interval, TimeUnit.MILLISECONDS);
+    }
+
+    private void buildModbusRequests(String message,
+                                     List<ModbusClient> incomingModbusConnections,
+                                     List<RequestHandler> outgoingConnections,
+                                     MessageModel messageModel) throws ModbusNumberException, ParseException {
+
+        Map<Integer, Long> msgToRegisterMap = Collections.emptyMap();
+        if (message != null) {
+            msgToRegisterMap =
+                    objectTransformer.transformToModbus(transformation.getToIncoming().getModbusRegisters(),
+                            message,
+                            transformation.getConnections().getOutgoingFormat());
+        }
+
+        for (ModbusClient modbusClient : incomingModbusConnections) {
+            HashMap<Integer, Object> registerMap = new HashMap<>();
+
+            sendModbusRequest(modbusClient, msgToRegisterMap, registerMap, messageModel);
+
+            if (transformation.getToOutgoing() != null) {
+                String transformedMessage = objectTransformer.transform(registerMap,
+                        transformation.getToOutgoing().getMessage(),
+                        transformation.getConnections().getIncomingFormat(),
+                        transformation.getConnections().getOutgoingFormat());
+                log.debug("Transformed message: {}", transformedMessage);
+
+                String toTopic = transformation.getToOutgoing().getToTopic();
+                toTopic = replacePlaceholders(toTopic);
+
+                sendMessage(transformedMessage,
+                        toTopic,
+                        outgoingConnections,
+                        transformation.getToOutgoing().getRetryCount());
             }
         }
     }
 
-    private ModbusRequest buildModbusRequest(Map<Integer, Long> msgToRegisterMap, ModbusModel modbusModel) throws ModbusNumberException {
-        ModbusRequest request;
-        ModbusRequestBuilder requestBuilder = ModbusRequestBuilder.getInstance();
-
-        switch (ModbusFunctionCode.get(transformation.getConnections().getModbusFunctionCode())) {
-            case READ_COILS ->
-                    request = requestBuilder.buildReadCoils(transformation.getConnections().getModbusDeviceID(),
-                            modbusModel.getAddress(),
-                            1);
-            case READ_DISCRETE_INPUTS ->
-                    request = requestBuilder.buildReadDiscreteInputs(transformation.getConnections().getModbusDeviceID(),
-                            modbusModel.getAddress(),
-                            1);
-            case READ_HOLDING_REGISTERS ->
-                    request = requestBuilder.buildReadHoldingRegisters(transformation.getConnections().getModbusDeviceID(),
-                            modbusModel.getAddress(),
-                            1);
-            case READ_INPUT_REGISTERS ->
-                    request = requestBuilder.buildReadInputRegisters(transformation.getConnections().getModbusDeviceID(),
-                            modbusModel.getAddress(),
-                            1);
-            case WRITE_SINGLE_COIL -> {
-                boolean value = msgToRegisterMap.containsKey(modbusModel.getAddress()) && msgToRegisterMap.get(modbusModel.getAddress()) == 1;
-                request = requestBuilder.buildWriteSingleCoil(transformation.getConnections().getModbusDeviceID(),
-                        modbusModel.getAddress(),
-                        value);
-            }
-            case WRITE_SINGLE_REGISTER ->
-                    request = requestBuilder.buildWriteSingleRegister(transformation.getConnections().getModbusDeviceID(),
-                            modbusModel.getAddress(),
-                            Math.toIntExact(msgToRegisterMap.get(modbusModel.getAddress())));
-            case READ_EXCEPTION_STATUS ->
-                    request = requestBuilder.buildReadExceptionStatus(transformation.getConnections().getModbusDeviceID());
-            case WRITE_MULTIPLE_COILS -> {
-                boolean value = msgToRegisterMap.containsKey(modbusModel.getAddress()) && msgToRegisterMap.get(modbusModel.getAddress()) == 1;
-                request = requestBuilder.buildWriteMultipleCoils(transformation.getConnections().getModbusDeviceID(),
-                        modbusModel.getAddress(),
-                        new boolean[]{value});
-            }
-            case WRITE_MULTIPLE_REGISTERS ->
-                    request = requestBuilder.buildWriteMultipleRegisters(transformation.getConnections().getModbusDeviceID(),
-                            modbusModel.getAddress(),
-                            new int[]{Math.toIntExact(msgToRegisterMap.get(modbusModel.getAddress()))});
-            case READ_WRITE_MULTIPLE_REGISTERS ->
-                    request = requestBuilder.buildReadWriteMultipleRegisters(transformation.getConnections().getModbusDeviceID(),
-                            modbusModel.getAddress(),
-                            1,
-                            modbusModel.getAddress(),
-                            new int[]{Math.toIntExact(msgToRegisterMap.get(modbusModel.getAddress()))});
-            default -> throw new IllegalArgumentException("Unknown function code");
+    private String replacePlaceholders(String topic) {
+        if (topic == null) {
+            return null;
         }
 
-        return request;
-    }
+        Pattern pattern = Pattern.compile("\\{(.*?)}");
+        Matcher matcher = pattern.matcher(topic);
+        StringBuilder sb = new StringBuilder();
+        while (matcher.find()) {
+            // Get the value inside the curly braces
+            String found = matcher.group(1);
 
-    private void handleModbusResponse(ModbusResponse response, Map<Integer, Object> registerMap, ModbusModel modbusModel) throws IllegalDataAddressException {
-        switch (ModbusFunctionCode.get(transformation.getConnections().getModbusFunctionCode())) {
-            case READ_DISCRETE_INPUTS, READ_COILS -> {
-                if (!modbusModel.getType().contains("bool")) {
-                    throw new IllegalArgumentException("Wrong type");
-                }
+            String value = System.getenv(found);
 
-                ReadCoilsResponse coilsResponse = (ReadCoilsResponse) response;
-                registerMap.put(modbusModel.getAddress(), coilsResponse.getModbusCoils().get(0));
+            if (value == null) {
+                value = System.getProperty(found, "#");
             }
-            case READ_WRITE_MULTIPLE_REGISTERS, READ_INPUT_REGISTERS, READ_HOLDING_REGISTERS -> {
-                ReadHoldingRegistersResponse holdingRegistersResponse = (ReadHoldingRegistersResponse) response;
 
-                getValueFromRegisters(holdingRegistersResponse, registerMap, modbusModel);
-            }
-            default -> throw new IllegalArgumentException("Unknown function code");
+            // Replace the found value with the replacement string
+            matcher.appendReplacement(sb, value);
         }
-    }
-
-    private void getValueFromRegisters(ReadHoldingRegistersResponse response, Map<Integer, Object> registerMap, ModbusModel modbusModel) throws IllegalDataAddressException {
-        if (modbusModel.getType().contains("int")) {
-            if (modbusModel.getType().contains("8")) {
-                registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getInt8At(0));
-            } else if (modbusModel.getType().contains("16")) {
-                registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getInt16At(0));
-            } else if (modbusModel.getType().contains("64")) {
-                registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getInt64At(0));
-            } else {
-                registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getInt32At(0));
-            }
-        } else if (modbusModel.getType().contains("long")) {
-            registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getInt64At(0));
-        } else if (modbusModel.getType().contains("float")) {
-            if (modbusModel.getType().contains("64")) {
-                registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getFloat64At(0));
-            } else {
-                registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getFloat32At(0));
-            }
-        } else if (modbusModel.getType().contains("double")) {
-            registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getFloat64At(0));
-        } else {
-            throw new IllegalArgumentException("Wrong type");
-        }
+        matcher.appendTail(sb);
+        return sb.toString();
     }
 }

@@ -1,0 +1,55 @@
+connections:
+  - name: NATS-connection
+    type: NATS
+    host: localhost
+    password: test
+  - name: Modbus-connection
+    type: Modbus
+    host: localhost
+    port: 5022
+transformations:
+  - name: Modbus to JSON IEEE2030.5 Event
+    description: Example showing transformation of messages from Modbus to JSON
+    connections:
+      incoming-connection:
+        - Modbus-connection
+      outgoing-connection:
+        - NATS-connection
+      outgoing-topic: event/myevent
+      outgoing-format: JSON
+    to-outgoing:
+      to-topic: event/myevent
+      message: '{
+            "creationTime": $timestamp,
+            "eventStatus": {
+                "currentStatus": {
+                  "lpc:mapping": {
+                    "path": "32000",
+                    "type": "integer",
+                    "values": ["scheduled", "active", "cancelled", "cancelled_with_r", "superseded"]
+                  }
+                },
+                "dateTime": null,
+                "potentiallySuperseded": false
+              },
+              "interval": {
+                "duration": {
+                  "lpc:mapping": {
+                    "path": "32002",
+                    "type": "integer"
+                  }
+                },
+                "start": null
+              }
+            }
+        '
+    interval-request:
+      interval: 3000 # in milliseconds
+      request:
+        modbus-function-code: 3
+        modbus-device-id: 1
+        modbus-registers:
+          - register-address: 32000
+            type: integer8
+          - register-address: 32002
+            type: integer8

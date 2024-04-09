@@ -20,17 +20,20 @@
  */
 package si.sunesis.interoperability.lpc.transformations.connections;
 
+import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3ClientBuilder;
+import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5ClientBuilder;
+import com.intelligt.modbus.jlibmodbus.Modbus;
 import com.intelligt.modbus.jlibmodbus.master.ModbusMasterFactory;
-import com.intelligt.modbus.jlibmodbus.serial.SerialParameters;
-import com.intelligt.modbus.jlibmodbus.serial.SerialPort;
+import com.intelligt.modbus.jlibmodbus.serial.*;
 import com.intelligt.modbus.jlibmodbus.tcp.TcpParameters;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
 import io.nats.client.Options;
 import lombok.Getter;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import si.sunesis.interoperability.common.AbstractRequestHandler;
+import si.sunesis.interoperability.common.interfaces.RequestHandler;
 import si.sunesis.interoperability.lpc.transformations.configuration.Configuration;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ConnectionModel;
 import si.sunesis.interoperability.modbus.ModbusClient;
@@ -38,6 +41,8 @@ import si.sunesis.interoperability.mqtt.Mqtt3Client;
 import si.sunesis.interoperability.mqtt.Mqtt5Client;
 import si.sunesis.interoperability.nats.NatsConnection;
 import si.sunesis.interoperability.nats.NatsRequestHandler;
+import si.sunesis.interoperability.rabbitmq.ChannelHandler;
+import si.sunesis.interoperability.rabbitmq.RabbitMQClient;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -48,11 +53,13 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 /**
  * @author David Trafela, Sunesis
@@ -66,82 +73,75 @@ public class Connections {
     private Configuration configuration;
 
     @Getter
-    private final Map<String, AbstractRequestHandler> connectionsMap = new HashMap<>();
+    private final Map<String, RequestHandler> connectionsMap = new HashMap<>();
 
-    @SneakyThrows
     @PostConstruct
     public void init() {
-        List<ConnectionModel> yamlConnections = configuration.getConnections();
-        log.info("Found {} connections", yamlConnections.size());
-        for (ConnectionModel connection : yamlConnections) {
-            if (connection.getType().equalsIgnoreCase("NATS")) {
-                NatsConnection client = buildNatsClient(connection);
+        List<ConnectionModel> yamlConnections = configuration.getConfigurations().stream()
+                .flatMap(item -> item.getConnections().stream())
+                .toList();
 
-                NatsRequestHandler requestHandler = new NatsRequestHandler(client);
+        Map<ConnectionModel, RequestHandler> clientMap = new HashMap<>();
+
+        log.debug("Found {} connections", yamlConnections.size());
+        for (ConnectionModel connection : yamlConnections) {
+            RequestHandler requestHandler = clientMap.get(connection);
+
+            if (requestHandler != null) {
+                log.debug("Connection {} already exists under different name", connection.getName());
                 this.connectionsMap.put(connection.getName(), requestHandler);
+                continue;
+            }
+
+            if (connection.getType().equalsIgnoreCase("NATS")) {
+                NatsConnection client;
+                try {
+                    client = buildNatsClient(connection);
+                    NatsRequestHandler natsRequestHandler = new NatsRequestHandler(client);
+                    this.connectionsMap.put(connection.getName(), natsRequestHandler);
+                    clientMap.put(connection, natsRequestHandler);
+                } catch (InterruptedException | IOException e) {
+                    log.error("Error building NATS client", e);
+                }
             } else if (connection.getType().equalsIgnoreCase("MQTT")) {
                 if (connection.getVersion() == 3) {
-                    this.connectionsMap.put(connection.getName(), buildMqtt3Client(connection));
+                    Mqtt3Client client = buildMqtt3Client(connection);
+                    this.connectionsMap.put(connection.getName(), client);
+                    clientMap.put(connection, client);
                 } else if (connection.getVersion() == 5) {
-                    this.connectionsMap.put(connection.getName(), buildMqtt5Client(connection));
+                    Mqtt5Client client = buildMqtt5Client(connection);
+                    this.connectionsMap.put(connection.getName(), client);
+                    clientMap.put(connection, client);
                 }
             } else if (connection.getType().equalsIgnoreCase("modbus")) {
                 if (connection.getHost() == null && connection.getDevice() == null) {
                     throw new IllegalArgumentException("Host or device is required for modbus connection");
                 }
 
-                if (connection.getHost() != null) {
-                    // TCP client
-                    TcpParameters tcpParameters = new TcpParameters();
-                    tcpParameters.setHost(InetAddress.getByName(connection.getHost()));
-                    tcpParameters.setPort(connection.getPort());
-
-                    ModbusClient client = new ModbusClient(ModbusMasterFactory.createModbusMasterTCP(tcpParameters));
+                try {
+                    Modbus.setLogLevel(Modbus.LogLevel.LEVEL_DEBUG);
+                    ModbusClient client = buildModbusClient(connection);
                     this.connectionsMap.put(connection.getName(), client);
-                } else {
-                    // Serial client
-                    SerialParameters serialParameters = getSerialParameters(connection);
-
-                    ModbusClient client = new ModbusClient(ModbusMasterFactory.createModbusMasterRTU(serialParameters));
+                    clientMap.put(connection, client);
+                } catch (UnknownHostException | SerialPortException e) {
+                    log.error("Error building Modbus client", e);
+                }
+            } else if (connection.getType().equalsIgnoreCase("RabbitMQ")) {
+                RabbitMQClient client;
+                try {
+                    client = buildRabbitMQClient(connection);
                     this.connectionsMap.put(connection.getName(), client);
+                    clientMap.put(connection, client);
+                } catch (IOException | TimeoutException e) {
+                    log.error("Error building RabbitMQ client", e);
                 }
             }
         }
-    }
-
-    public Map<String, NatsRequestHandler> getNatsConnections(String... connectionNames) {
-        HashMap<String, NatsRequestHandler> natsConnections = new HashMap<>();
-        for (Map.Entry<String, AbstractRequestHandler> entry : connectionsMap.entrySet()) {
-            if (entry.getValue() instanceof NatsRequestHandler handler) {
-                if (connectionNames != null && connectionNames.length > 0
-                        && !Arrays.asList(connectionNames).contains(entry.getKey())) {
-                    continue;
-                }
-
-                natsConnections.put(entry.getKey(), handler);
-            }
-        }
-        return natsConnections;
-    }
-
-    public Map<String, Mqtt5Client> getMqttConnections(String... connectionNames) {
-        HashMap<String, Mqtt5Client> mqttConnections = new HashMap<>();
-        for (Map.Entry<String, AbstractRequestHandler> entry : connectionsMap.entrySet()) {
-            if (entry.getValue() instanceof Mqtt5Client handler) {
-                if (connectionNames != null && connectionNames.length > 0
-                        && !Arrays.asList(connectionNames).contains(entry.getKey())) {
-                    continue;
-                }
-
-                mqttConnections.put(entry.getKey(), handler);
-            }
-        }
-        return mqttConnections;
     }
 
     public Map<String, ModbusClient> getModbusConnections(String... connectionNames) {
         HashMap<String, ModbusClient> modbusConnections = new HashMap<>();
-        for (Map.Entry<String, AbstractRequestHandler> entry : connectionsMap.entrySet()) {
+        for (Map.Entry<String, RequestHandler> entry : connectionsMap.entrySet()) {
             if (entry.getValue() instanceof ModbusClient handler) {
                 if (connectionNames != null && connectionNames.length > 0
                         && !Arrays.asList(connectionNames).contains(entry.getKey())) {
@@ -175,7 +175,9 @@ public class Connections {
         Mqtt3ClientBuilder client = com.hivemq.client.mqtt.mqtt3.Mqtt3Client.builder()
                 .identifier(connection.getName())
                 .serverHost(connection.getHost())
-                .serverPort(connection.getPort());
+                .serverPort(connection.getPort())
+                .addDisconnectedListener(context -> log.debug("Disconnected from MQTT broker 3: {}", context.getCause()))
+                .addConnectedListener(context -> log.debug("Connected to MQTT broker 3"));
 
         if (Boolean.TRUE.equals(connection.getReconnect())) {
             client = client.automaticReconnectWithDefaultConfig();
@@ -212,14 +214,19 @@ public class Connections {
             }
         }
 
-        return new Mqtt3Client(client.buildAsync());
+        Mqtt3BlockingClient client1 = client.buildBlocking();
+        client1.connect();
+
+        return new Mqtt3Client(client1.toAsync());
     }
 
     private Mqtt5Client buildMqtt5Client(ConnectionModel connection) {
         Mqtt5ClientBuilder client = com.hivemq.client.mqtt.mqtt5.Mqtt5Client.builder()
                 .identifier(connection.getName())
                 .serverHost(connection.getHost())
-                .serverPort(connection.getPort());
+                .serverPort(connection.getPort())
+                .addDisconnectedListener(context -> log.debug("Disconnected from MQTT broker 5: {}", context.getCause()))
+                .addConnectedListener(context -> log.debug("Connected to MQTT broker 5"));
 
         if (Boolean.TRUE.equals(connection.getReconnect())) {
             client = client.automaticReconnectWithDefaultConfig();
@@ -249,8 +256,73 @@ public class Connections {
                 client = client.sslWithDefaultConfig();
             }
         }
+        Mqtt5BlockingClient client1 = client.buildBlocking();
+        client1.connect();
 
-        return new Mqtt5Client(client.buildAsync());
+        return new Mqtt5Client(client1.toAsync());
+    }
+
+    private RabbitMQClient buildRabbitMQClient(ConnectionModel connection) throws IOException, TimeoutException {
+        Connection connectionMQ = getRabbitMQConnection(connection);
+
+        ChannelHandler channelHandler = new ChannelHandler.ChannelHandlerBuilder()
+                .setConnection(connectionMQ)
+                .setExchangeName(connection.getExchangeName())
+                .setExchangeType(connection.getExchangeType())
+                .setRoutingKey(connection.getRoutingKey())
+                .build();
+
+        return new RabbitMQClient(channelHandler);
+    }
+
+    private static Connection getRabbitMQConnection(ConnectionModel connection) throws IOException, TimeoutException {
+        ConnectionFactory factory = new ConnectionFactory();
+
+        factory.setHost(connection.getHost());
+
+        if (connection.getPort() != null) {
+            factory.setPort(connection.getPort());
+        }
+
+        factory.setVirtualHost(connection.getVirtualHost());
+
+        if (Boolean.TRUE.equals(connection.getReconnect())) {
+            factory.setAutomaticRecoveryEnabled(true);
+        }
+
+        if (connection.getUsername() != null && connection.getPassword() != null) {
+            factory.setUsername(connection.getUsername());
+            factory.setPassword(connection.getPassword());
+        }
+
+        return factory.newConnection();
+    }
+
+    private ModbusClient buildModbusClient(ConnectionModel connectionModel) throws SerialPortException, UnknownHostException {
+        if (connectionModel.getHost() != null && connectionModel.getDevice() != null) {
+            TcpParameters tcpParameters = new TcpParameters();
+            tcpParameters.setHost(InetAddress.getByName(connectionModel.getHost()));
+            tcpParameters.setPort(connectionModel.getPort());
+            SerialUtils.setSerialPortFactory(new SerialPortFactoryTcpServer(tcpParameters));
+            SerialParameters serialParameters = getSerialParameters(connectionModel);
+
+            return new ModbusClient(ModbusMasterFactory.createModbusMasterRTU(serialParameters));
+        }
+
+        if (connectionModel.getHost() != null) {
+            // TCP client
+            TcpParameters tcpParameters = new TcpParameters();
+            tcpParameters.setHost(InetAddress.getByName(connectionModel.getHost()));
+            tcpParameters.setPort(connectionModel.getPort());
+
+            return new ModbusClient(ModbusMasterFactory.createModbusMasterTCP(tcpParameters));
+        } else {
+            // Serial client
+            SerialUtils.setSerialPortFactory(new SerialPortFactoryJSerialComm());
+            SerialParameters serialParameters = getSerialParameters(connectionModel);
+
+            return new ModbusClient(ModbusMasterFactory.createModbusMasterRTU(serialParameters));
+        }
     }
 
     private SerialParameters getSerialParameters(ConnectionModel connection) {

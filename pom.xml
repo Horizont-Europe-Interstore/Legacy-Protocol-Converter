@@ -6,7 +6,7 @@
 
     <groupId>si.sunesis.interoperability.lpc</groupId>
     <artifactId>legacy-protocol-converter</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
     <packaging>pom</packaging>
     <modules>
         <module>transformation-framework</module>
@@ -26,6 +26,10 @@
 
         <jakarta-xml.bind-api.version>4.0.0</jakarta-xml.bind-api.version>
         <jaxb-impl.version>4.0.3</jaxb-impl.version>
+
+        <jserialcomm.version>2.10.4</jserialcomm.version>
+
+        <interoperability-common.version>1.0</interoperability-common.version>
     </properties>
 
     <dependencies>
@@ -45,26 +49,33 @@
         <dependency>
             <groupId>si.sunesis.interoperability.common</groupId>
             <artifactId>common</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${interoperability-common.version}</version>
         </dependency>
 
         <dependency>
             <groupId>si.sunesis.interoperability.common</groupId>
             <artifactId>nats</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${interoperability-common.version}</version>
         </dependency>
 
         <dependency>
             <groupId>si.sunesis.interoperability.common</groupId>
             <artifactId>mqtt</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${interoperability-common.version}</version>
         </dependency>
 
         <dependency>
             <groupId>si.sunesis.interoperability.common</groupId>
             <artifactId>modbus</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${interoperability-common.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>si.sunesis.interoperability.common</groupId>
+            <artifactId>rabbitmq</artifactId>
+            <version>${interoperability-common.version}</version>
+        </dependency>
+
     </dependencies>
 
     <dependencyManagement>
@@ -90,6 +101,13 @@
                 <artifactId>jaxb-impl</artifactId>
                 <version>${jaxb-impl.version}</version>
                 <scope>runtime</scope>
+            </dependency>
+
+            <!-- Modbus serial communication -->
+            <dependency>
+                <groupId>com.fazecast</groupId>
+                <artifactId>jSerialComm</artifactId>
+                <version>${jserialcomm.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

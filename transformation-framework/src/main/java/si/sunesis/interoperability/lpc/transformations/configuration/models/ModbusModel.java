@@ -24,10 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kumuluz.ee.configuration.cdi.ConfigValue;
 import lombok.Data;
 
-/**
- * @author David Trafela, Sunesis
- * @since 1.0.0
- */
+ 
 @Data
 public class ModbusModel {
 

@@ -39,7 +39,10 @@ import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 import java.io.StringReader;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Map;
 
@@ -132,6 +135,12 @@ public abstract class AbstractMapper {
     }
 
     public String getMappedValueModbus(Map<Integer, Object> modbusInput) {
+        setPath(getPath().replace("/", ""));
+
+        if (!modbusInput.containsKey(Integer.parseInt(getPath()))) {
+            return null;
+        }
+
         Object value = modbusInput.get(Integer.parseInt(getPath()));
 
         if (value instanceof Double d) {
@@ -147,12 +156,12 @@ public abstract class AbstractMapper {
         return null;
     }
 
-    private String getValue(String cleanedValue) throws ParseException {
+    private String getValue(String cleanedValue) {
         cleanedValue = cleanedValue.trim();
         if (getValues() != null && getValues().length > 0) {
             if (getType().toLowerCase().contains("int")) {
                 if (isNumber(cleanedValue)) {
-                    return "\"" + getValues()[Integer.parseInt(cleanedValue)] + "\"";
+                    return getValues()[Integer.parseInt(cleanedValue)];
                 }
                 for (int iii = 0; iii < getValues().length; iii++) {
                     if (getValues()[iii].equalsIgnoreCase(cleanedValue.trim())) {
@@ -160,21 +169,42 @@ public abstract class AbstractMapper {
                     }
                 }
             } else if (getType().toLowerCase().contains("str")) {
-                return "\"" + getValues()[Integer.parseInt(cleanedValue)] + "\"";
+                if (isNumber(cleanedValue)) {
+                    return "\"" + getValues()[Integer.parseInt(cleanedValue)] + "\"";
+                }
+
+                for (int iii = 0; iii < getValues().length; iii++) {
+                    if (getValues()[iii].equalsIgnoreCase(cleanedValue.trim())) {
+                        return "\"" + iii + "\"";
+                    }
+                }
+
+                return null;
             }
         } else if (getPattern() != null && (getType().equalsIgnoreCase("date") || getType().equalsIgnoreCase("datetime"))) {
-            SimpleDateFormat simpleDateFormat = new SimpleDateFormat(getPattern());
+            setPattern(getPattern().replace("\"", "'"));
             log.debug("Pattern: {}", getPattern());
+            log.debug("Date value to parse: {}", cleanedValue);
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(getPattern());
 
             if (isNumber(cleanedValue)) {
                 Date date = new Date(Long.parseLong(cleanedValue));
-                return "\"" + simpleDateFormat.format(date) + "\"";
+                LocalDateTime ldt = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+                return "\"" + ldt.format(formatter) + "\"";
             }
 
-            log.debug("Cleaned value: {}", cleanedValue);
-            Date date = simpleDateFormat.parse(cleanedValue);
+            Date date;
 
-            log.debug("Date: {}", date);
+            if (getPattern().contains("H") || getPattern().contains("h") || getPattern().contains("K") || getPattern().contains("k")) {
+                LocalDateTime ldt = LocalDateTime.parse(cleanedValue, formatter);
+                date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+            } else {
+                LocalDate ld = LocalDate.parse(cleanedValue, formatter);
+                date = Date.from(ld.atStartOfDay(ZoneId.systemDefault()).toInstant());
+            }
+
+            log.debug("Parsed date: {}", date);
 
             return "\"" + date.getTime() + "\"";
         }

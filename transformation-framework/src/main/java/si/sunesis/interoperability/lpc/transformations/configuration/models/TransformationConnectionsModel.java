@@ -47,10 +47,4 @@ public class TransformationConnectionsModel {
 
     @JsonProperty("outgoing-connection")
     private String[] outgoingConnections;
-
-    @JsonProperty("modbus-device-id")
-    private Integer modbusDeviceID;
-
-    @JsonProperty("modbus-function-code")
-    private Integer modbusFunctionCode;
 }

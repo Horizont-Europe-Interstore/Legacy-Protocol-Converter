@@ -133,7 +133,7 @@ public class ObjectTransformer {
                 JSONMapper jsonMapper = new JSONMapper(modbusModel.getPath(), modbusModel.getType(), modbusModel.getValues(), modbusModel.getPattern());
                 String value = jsonMapper.getMappedValueJSON(jsonNode);
 
-                log.info("Added value for register: {} with value: {}", modbusModel.getAddress(), value);
+                log.debug("Added value for register: {} with value: {}", modbusModel.getAddress(), value);
 
                 result.put(modbusModel.getAddress(), Long.parseLong(value));
             }
@@ -211,6 +211,10 @@ public class ObjectTransformer {
 
             log.debug("path: {}, value: {}", mapper.getPath(), value);
 
+            if(value == null) {
+                value = "null";
+            }
+
             mappingMatcher.appendReplacement(modifiedMapping, value);
         }
         mappingMatcher.appendTail(modifiedMapping);
@@ -279,11 +283,12 @@ public class ObjectTransformer {
             transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
             transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
             transformer = transformerFactory.newTransformer();
-            transformer.setOutputProperty(OutputKeys.INDENT, "no");
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
             StringWriter writer = new StringWriter();
             transformer.transform(new DOMSource(document), new StreamResult(writer));
 
             String xmlString = writer.getBuffer().toString();
+            xmlString = xmlString.replace(">\n", ">");
             int index = xmlString.indexOf("?>");
             if (index != -1) {
                 xmlString = xmlString.substring(0, index + 2) + "\n" + xmlString.substring(index + 2);

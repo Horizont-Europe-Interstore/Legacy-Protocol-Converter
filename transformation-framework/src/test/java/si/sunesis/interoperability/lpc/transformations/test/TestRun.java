@@ -5,7 +5,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Assert;
 import org.junit.Test;
-import si.sunesis.interoperability.lpc.transformations.configuration.models.TransformationsModel;
+import si.sunesis.interoperability.lpc.transformations.configuration.models.ConfigurationModel;
 
 import java.io.*;
 
@@ -19,13 +19,13 @@ public class TestRun {
 
         InputStream inputStream = getClass().getResourceAsStream("/conf/mqtt-nats.yaml");
         String file = readFromInputStream(inputStream);
-        TransformationsModel transformationsModel = objectMapper.readValue(
+        ConfigurationModel configurationModel = objectMapper.readValue(
                 file,
-                TransformationsModel.class);
+                ConfigurationModel.class);
 
-        Assert.assertEquals(2, transformationsModel.getConnections().size());
-        Assert.assertEquals(1, transformationsModel.getTransformations().size());
-        Assert.assertNull(transformationsModel.getTransformations().get(0).getToIncoming());
+        Assert.assertEquals(2, configurationModel.getConnections().size());
+        Assert.assertEquals(1, configurationModel.getTransformations().size());
+        Assert.assertNull(configurationModel.getTransformations().get(0).getToIncoming());
     }
 
     private static String readFromInputStream(InputStream inputStream)

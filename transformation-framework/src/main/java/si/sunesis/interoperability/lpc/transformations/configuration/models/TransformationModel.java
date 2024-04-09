@@ -21,12 +21,7 @@
 package si.sunesis.interoperability.lpc.transformations.configuration.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonRootName;
-import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.Data;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * @author David Trafela, Sunesis
@@ -35,39 +30,22 @@ import java.util.Map;
 @Data
 public class TransformationModel {
 
-    private String name;
+    private String name = null;
 
     private String description;
 
     @JsonProperty("connections")
     private TransformationConnectionsModel connections;
 
+    @JsonProperty("to-incoming")
+    private MessageModel toIncoming;
 
-
-    private String toIncoming;
-
-    private List<ModbusModel> toModbus;
-
-    @JsonSetter("to-incoming")
-    private void unpackNested(Object toIncoming) {
-        if (toIncoming instanceof String incoming) {
-            this.toIncoming = incoming;
-        } else if (toIncoming instanceof Map incoming) {
-            this.toModbus = (List<ModbusModel>) incoming.get("modbus-registers");
-        }
-    }
+    @JsonProperty("interval-request")
+    private IntervalRequestModel intervalRequest;
 
     @JsonProperty("to-outgoing")
-    private String toOutgoing;
+    private MessageModel toOutgoing;
 
     @JsonProperty("validate-schema")
     private Boolean validateSchema = false;
-
-    @JsonRootName("to-incoming")
-    private class ToIncomingModel {
-        private String name;
-        private Integer address;
-        private Integer length;
-        private String type;
-    }
 }

@@ -46,13 +46,26 @@ public class ConnectionModel {
 
     private String password;
 
-    private SslModel ssl;
+    private SslModel ssl = new SslModel();
 
     @EqualsAndHashCode.Exclude
     private Boolean reconnect = false;
 
     // MQTT
     private Integer version = 5;
+
+    // RabbitMQ
+    @JsonProperty("virtual-host")
+    private String virtualHost = "/";
+
+    @JsonProperty("exchange-name")
+    private String exchangeName;
+
+    @JsonProperty("routing-key")
+    private String routingKey = "";
+
+    @JsonProperty("exchange-type")
+    private String exchangeType = "direct";
 
     // Modbus
     private String device;
