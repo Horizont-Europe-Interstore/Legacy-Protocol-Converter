@@ -1,0 +1,68 @@
+connections:
+  - name: MQTT-connection2
+    type: MQTT
+    ssl:
+      default: true
+    version: 5
+    host: 37aad5450fca492297d7d3bc3329f4ba.s2.eu.hivemq.cloud
+    port: 8883
+    username: lpc-user
+    password: zv.NaiixwWZ7wCC
+  - name: MQTT-connection
+    type: MQTT
+    host: mqtt.dev.cyber-grid.com
+    version: 3
+    ssl:
+      default: true
+    port: 8883
+    username: sunesis
+    password: gCAaLOD8w7^0*@2H
+registration:
+  topic: test
+  outgoing-connection:
+    - MQTT-connection
+  message: '{
+        "registration": true
+    }'
+transformations:
+  - name: XML IncomingEvent to JSON IEEE2030.5 Event
+    description: Example showing transformation of messages from XML to JSON
+    connections:
+      incoming-connection:
+        - MQTT-connection2
+      incoming-topic: test2
+      incoming-format: JSON
+      outgoing-connection:
+        - MQTT-connection
+      outgoing-topic: devices/64f68866-6d97-4b7a-8794-439c14ffb345/attributes/999f0191-a8eb-44c0-a4ec-0100c176402b/control
+      outgoing-format: JSON
+    to-outgoing:
+      retry-count: 3
+      to-topic: devices/64f68866-6d97-4b7a-8794-439c14ffb345/attributes/999f0191-a8eb-44c0-a4ec-0100c176402b/monitor
+      message: '{
+        "value": {
+          "lpc:mapping": {
+            "path": "/my_value",
+            "type": "float"
+          }
+        },
+        "timestamp": {
+          "lpc:mapping": {
+            "path": "/timestamp",
+            "type": "datetime",
+            "pattern": "yyyy-MM-dd\"T\"HH:mm:ss\"Z\""
+          }
+        }
+      }'
+    interval-request:
+      interval: 10000 # in milliseconds
+      request:
+        to-topic: test
+        reply-from-topic: test
+        message:
+          '{
+            "request": "interval"
+          }'
+
+
+
