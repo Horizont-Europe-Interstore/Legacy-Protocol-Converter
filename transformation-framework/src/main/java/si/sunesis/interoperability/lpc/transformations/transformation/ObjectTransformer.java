@@ -77,6 +77,7 @@ public class ObjectTransformer {
         try {
             if (objectInput instanceof String input) {
                 mappingDefinition = mappingDefinition.replace("$timestamp", String.valueOf(System.currentTimeMillis()));
+                mappingDefinition = mappingDefinition.replace("\"$timestamp\"", String.valueOf(System.currentTimeMillis()));
 
                 JsonNode jsonNode = isValidJson(input);
 

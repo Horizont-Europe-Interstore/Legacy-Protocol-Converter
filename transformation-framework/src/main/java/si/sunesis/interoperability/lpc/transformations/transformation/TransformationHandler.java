@@ -24,7 +24,6 @@ import com.intelligt.modbus.jlibmodbus.exception.IllegalDataAddressException;
 import com.intelligt.modbus.jlibmodbus.exception.ModbusIOException;
 import com.intelligt.modbus.jlibmodbus.exception.ModbusNumberException;
 import com.intelligt.modbus.jlibmodbus.msg.base.ModbusRequest;
-import com.intelligt.modbus.jlibmodbus.msg.response.ReadHoldingRegistersResponse;
 import lombok.extern.slf4j.Slf4j;
 import si.sunesis.interoperability.common.exceptions.HandlerException;
 import si.sunesis.interoperability.common.interfaces.RequestHandler;
@@ -36,7 +35,6 @@ import si.sunesis.interoperability.modbus.ModbusClient;
 
 import java.text.ParseException;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -140,8 +138,12 @@ public class TransformationHandler {
     }
 
     private void handleIncomingTransformations() {
-        if (transformation.getToIncoming() != null) {
-            if (transformation.getToIncoming().getToTopic() != null) {
+        boolean toIncoming = transformation.getToIncoming() != null &&
+                ((transformation.getToIncoming().getToTopic() != null && !transformation.getToIncoming().getToTopic().isEmpty())
+                        || (transformation.getToIncoming().getModbusRegisters() != null && !transformation.getToIncoming().getModbusRegisters().isEmpty()));
+
+        if (toIncoming) {
+            if (!isModbus()) {
                 String outgoingTopic = transformation.getConnections().getOutgoingTopic();
                 outgoingTopic = replacePlaceholders(outgoingTopic);
 
@@ -165,7 +167,7 @@ public class TransformationHandler {
                                 transformation.getToIncoming().getRetryCount());
                     });
                 }
-            } else if (transformation.getToIncoming().getModbusRegisters() != null && !transformation.getToIncoming().getModbusRegisters().isEmpty()) {
+            } else if (isModbus()) {
                 String[] incomingConnectionNames = transformation.getConnections().getIncomingConnections();
 
                 List<ModbusClient> incomingModbusConnections =
@@ -272,8 +274,7 @@ public class TransformationHandler {
             return;
         }
 
-        if (transformation.getIntervalRequest().getRequest().getToTopic() == null
-                && !transformation.getIntervalRequest().getRequest().getModbusRegisters().isEmpty()) {
+        if (isModbus()) {
             handleModbusInterval();
         } else if (transformation.getIntervalRequest().getRequest().getToTopic() != null) {
             handleInterval();
@@ -409,5 +410,11 @@ public class TransformationHandler {
         }
         matcher.appendTail(sb);
         return sb.toString();
+    }
+
+    private boolean isModbus() {
+        Collection<ModbusClient> clients = connections.getModbusConnections(transformation.getConnections().getIncomingConnections()).values();
+
+        return !clients.isEmpty();
     }
 }
