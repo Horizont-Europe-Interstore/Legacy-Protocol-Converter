@@ -36,333 +36,59 @@ Overall, the Legacy Protocol Converter is a tool for enabling communication betw
 different communication protocols. It supports the latest IEEE2030.5 standard and provides a flexible and efficient way
 to translate messages between different protocols.
 
+## Running
+
+### Running LPC with pre-built JAR
+
+JRE 17 is required to run the JAR file.
+
+JAR file is located in the official GitHub repository of LPC
+here: https://github.com/Horizont-Europe-Interstore/Legacy-Protocol-Converter/blob/master/lpc-1.0.jar
+
+You can download the JAR file and then run the following command to start the LPC:
+
+```bash
+java -jar lpc-1.0.jar
+```
+
+This will take the configuration files from ```./conf``` folder. If you want to specify a different folder, you can do
+so by providing the path as an argument:
+
+```bash
+java -DCONFIGURATION=/path/to/config -jar lpc-1.0.jar
+```
+
+This will take the configuration files from ```/path/to/config``` folder.
+
+### Running LPC with pre-built Docker image
+
+Docker is required to run the Docker image.
+
+Docker image is located on Docker Hub here: https://hub.docker.com/r/interstore/legacy-protocol-converter
+
+When using Docker to run the LPC, configuration folder must be mounted to the container.
+You can run the Docker image with the following command:
+
+```bash
+docker run -v /path/to/config:/app/conf interstore/legacy-protocol-converter
+```
+
+This will mount the configuration folder `/path/to/config` to the container and LPC will read the configuration files
+from that folder.
+
+### How to start NATS server in Docker
+
+NATS image is available on Docker Hub: https://hub.docker.com/_/nats
+
+To start NATS server in Docker, you can use the following command:
+
+```bash
+docker run -d --name nats-main -p 4222:4222 -p 6222:6222 -p 8222:8222 nats:latest
+```
+
+Then in order for the LPC to connect to the NATS server, you must configure the two containers to use the same network.
+
 ## Configuration
-
-General format of the configuration file is following:
-
-```yaml
-connections:
-  -
-  -
-registration:
-  topic:
-  outgoing-connection:
-    -
-    -
-  message:
-transformations:
-  -
-  -
-```
-
-### Connections
-
-Each incoming/outgoing connection must be configured in the list of connections so the LPC
-knows how to connect.
-
-Possible options for each connection are following:
-
-```yaml
-connections:
-  - name: string
-    type: NATS/MQTT/RabbitMQ/Modbus
-    host: string
-    port: integer
-    ssl:
-      default: true/false
-    username: string
-    password: string
-    version: 3/5
-    virtual-host: string
-    exchange-name: string
-    routing-key: string
-    exchange-type: direct/fanout/topic
-    reconnect: true/false
-    device: string
-    baud-rate: integer
-    data-bits: integer
-    parity: none/even/odd/space/mark
-    stop-bits: integer
-...
-```
-
-**name** and **type** are required keys.
-
-#### NATS
-
-Currently supported parameters for connection with NATS are **host**,
-**port**, **username**, **password** and **reconnect**.
-
-Example of configuration for NATS:
-
-```yaml
-connections:
-  - name: NATS-connection
-    type: NATS
-    host: nats://localhost
-    port: 4222
-    username: userTest
-    password: testUser
-    reconnect: true
-...
-```
-
-#### MQTT
-
-Currently supported parameters for connection with MQTT are **host**,
-**port**, **ssl**, **version**, **username**, **password** and **reconnect**.
-
-Example of configuration for MQTT:
-
-```yaml
-connections:
-  - name: MQTT-connection
-    type: MQTT
-    host: localhost
-    port: 8883
-    ssl:
-      default: true
-    version: 3
-    username: username
-    password: password
-    reconnect: false
-...
-```
-
-#### RabbitMQ
-
-Currently supported parameters for connection with RabbitMQ are **host**,
-**port**, **username**, **password**, **virtual-host**, **exchange-name**,
-**routing-key**, **exchange-type**, **reconnect**.
-
-**virtual-host**, **exchange-name**, **routing-key**, **exchange-type** are optional.
-
-Default value for **virtual-host** is **/**.
-
-Example of configuration for RabbitMQ:
-
-```yaml
-connections:
-  - name: RabbitMQ-connection
-    type: RabbitMQ
-    host: localhost
-    virtual-host: /
-    exchange-name: exchange
-    routing-key: key
-    exchange-type: direct
-...
-```
-
-#### Modbus
-
-Configuration for Modbus depends on connection type, LPC supports serial connection or TCP connection.
-For TCP connection parameters **host** and **port** are required.
-For serial connection parameters **device** is required, optional parameters are
-**baud-rate**, **data-bits**, **parity** and **stop-bits**.
-
-Option for RTU over TCP is also supported by configuring both parameters
-for TCP and serial connection.
-
-Example of configuration for serial Modbus connection:
-
-```yaml
-connections:
-  - name: Modbus-connection
-    type: Modbus
-    device: /dev/ttymxc2
-    baud-rate: 115200
-    data-bits: 8
-    parity: none
-...
-```
-
-Example of configuration for TCP Modbus connection:
-
-```yaml
-connections:
-  - name: Modbus-connection
-    type: Modbus
-    host: localhost
-    port: 502
-  ..
-```
-
-### Registration
-
-Registration is optional and provides support for registering the LPC by specified connections.
-It is designed to send a message once to the specified topic when the LPC is started.
-
-Possible options are:
-
-```yaml
-registration:
-  topic: string
-  outgoing-connection:
-    -
-    -
-  message: string
-```
-
-- **topic:** Topic on which the registration message will be sent.
-- **outgoing-connection:** List of connection names, this connections will be used for sending registration message to
-  server. Must match the name in the **connections**.
-- **message:** Message that will be sent to the specified topic.
-
-Example of registration:
-
-```yaml
-registration:
-  topic: registration/device/{deviceId}
-  outgoing-connection:
-    - NATS-connection
-  message: '
-    {
-      "status": "online"
-    }
-  '
-```
-
-### Transformations
-
-In the transformations section, each transformation is described, from which topics to listen on to
-mapping incoming/outgoing messages to specified format and structure.
-
-Possible options for each transformation are following:
-
-```yaml
-connections:
-  -
-  -
-transformations:
-  - name: string
-    description: string
-    connections:
-      incoming-connection:
-        -
-        -
-      incoming-topic: string
-      incoming-format: XML/JSON
-      outgoing-connection:
-        -
-        -
-      outgoing-topic: string
-      outgoing-format: XML/JSON
-    to-outgoing:
-      retry-count: integer
-      topic: string
-      message: string
-    to-incoming:
-      retry-count: integer
-      to-topic: string
-      message: string
-    or
-    to-incoming:
-      retry-count: integer
-      modbus-function-code: integer
-      modbus-device-id: integer
-      modbus-registers:
-        - register-address: integer
-          path: string
-          type: int8/int16/int32/int64/float32/float64
-          pattern: string
-          values: array
-    interval-request:
-      interval: integer
-      request:
-        modbus-function-code: integer
-        modbus-device-id: integer
-        modbus-registers:
-          - register-address: integer
-            path: string
-            type: int8/int16/int32/int64/float32/float64
-            pattern: string
-            values: array
-      or
-      request:
-        to-topic: string
-        reply-from-topic: string
-        message: string
-```
-
-General options:
-
-- **name:** Short name of the transformation
-- **description:** Description of the transformation
-
-Connection options:
-
-- **connections.incoming-connection:** List of connection names, this connections will be used for sending/receiving the
-  data from clients. If using Modbus, only Modbus connections must be listed here. Must match the name in the *
-  *connections**.
-- **connections.incoming-topic:** On which topic MQTT/NATS/RabbitMQ client will listen for the incoming messages.
-- **connections.incoming-format:** Format of the incoming messages.
-- **connections.outgoing-connection:** List of connection names, this connections will be used for sending/receiving the
-  data from server. Must match the name in the **connections**.
-- **connections.outgoing-topic:** On which topic MQTT/NATS/RabbitMQ client will listen for the messages from server.
-- **connections.outgoing-format:** Format of the outgoing messages.
-
-Messages options:
-
-- **to-outgoing:** Structure of the outgoing message with defined options.
-    - **retry-count:** Number of retries for sending the message.
-    - **to-topic:** Topic on which the message will be sent.
-    - **message:** Message with mappings that will be sent to the specified topic.
-- **to-incoming:** Structure of the incoming message with defined options.
-    - **retry-count:** Number of retries for sending the message.
-    - **to-topic:** Topic on which the message will be sent.
-    - **message:** Message with mappings that will be sent to the specified topic.
-    - **modbus-function-code:** Function code for reading/writing data from/to Modbus device.
-    - **modbus-device-id:** Client id of the Modbus device.
-    - **modbus-registers:** List of definitions of modbus registers used for writing/reading the data.
-
-Interval request options:
-
-- **interval-request:** Structure of the interval request with defined options.
-    - **interval:** Interval in milliseconds for sending the request.
-    - **request:** Structure of the request with defined mappings and topic.
-    - **to-topic:** Topic on which the message will be sent.
-    - **reply-from-topic:** Topic from which the reply will be received.
-    - **message:** Message with mappings that will be sent to the specified topic.
-    - **modbus-function-code:** Function code for reading/writing data from/to Modbus device.
-    - **modbus-device-id:** Client id of the Modbus device.
-    - **modbus-registers:** List of definitions of modbus registers used for writing/reading the data.
-
-**retry-count** is used for all message structures and it specifies the number of retries for sending the message. If
-not specified, default value is 0.
-
-All topics provide support for placeholders, by using `{KEY}`.
-LPC will replace this `KEY` with either system variable under the key `KEY` or with the value from provided Java
-argument.
-
-For example, `registration/device/{deviceId}` will be replaced with `registration/device/1` if the `deviceId` is 1.
-
-### Mapping definitions
-
-Transforming messages from one structure to another is done with the help of a mapper. Each mapper has the following
-variables that are configurable:
-
-- type
-- path
-- pattern
-- values
-
-**type** specifies the type to which value must be converted to. Possible values are: *integer*, *float*, *double*,
-*date*, *datetime* and *string*.
-When using Modbus, number of bits is required, so *integer8* (or *int8*), *int16*, *int32*, *int64* and also *float32*
-and *float64*;
-*int64* is converted to **long** and *float64* is converted to **double**. *date* and *datetime* are converted to long
-representing the number of milliseconds since January 1, 1970, 00:00:00 GMT.
-
-**path** specifies path to the value that will be used in new message structure. For XML/JSON this is done using XPath
-or JSON Pointer (e.g. /OutgoingEvent/currentStatus). For Modbus messages, register address must be provided.
-
-**pattern** is needed only when type is *datetime* or *date* as it specifies the format of the provided temporal value
-at path.
-
-**values** is needed only when value must be converted to the index of an array or index to some value from the array.
-
-For easier explanation of options, we will use examples.
-
 ### Transforming from JSON to XML
 
 We will be transforming JSON structure of IncomingEvent to
@@ -804,53 +530,3 @@ docker run -v /path/to/config:/app/conf lpc:latest
 ```
 
 Pre-built Docker images are available here: https://hub.docker.com/r/interstore/legacy-protocol-converter
-
-### Running LPC with pre-built JAR
-
-JRE 17 is required to run the JAR file.
-
-JAR file is located in the official GitHub repository of LPC
-here: https://github.com/Horizont-Europe-Interstore/Legacy-Protocol-Converter/blob/master/lpc-1.0.jar
-
-You can download the JAR file and then run the following command to start the LPC:
-
-```bash
-java -jar lpc-1.0.jar
-```
-
-This will take the configuration files from ```./conf``` folder. If you want to specify a different folder, you can do
-so by providing the path as an argument:
-
-```bash
-java -DCONFIGURATION=/path/to/config -jar lpc-1.0.jar
-```
-
-This will take the configuration files from ```/path/to/config``` folder.
-
-### Running LPC with pre-built Docker image
-
-Docker is required to run the Docker image.
-
-Docker image is located on Docker Hub here: https://hub.docker.com/r/interstore/legacy-protocol-converter
-
-When using Docker to run the LPC, configuration folder must be mounted to the container.
-You can run the Docker image with the following command:
-
-```bash
-docker run -v /path/to/config:/app/conf interstore/legacy-protocol-converter
-```
-
-This will mount the configuration folder `/path/to/config` to the container and LPC will read the configuration files
-from that folder.
-
-### How to start NATS server in Docker
-
-NATS image is available on Docker Hub: https://hub.docker.com/_/nats
-
-To start NATS server in Docker, you can use the following command:
-
-```bash
-docker run -d --name nats-main -p 4222:4222 -p 6222:6222 -p 8222:8222 nats:latest
-```
-
-Then in order for the LPC to connect to the NATS server, you must configure the two containers to use the same network.

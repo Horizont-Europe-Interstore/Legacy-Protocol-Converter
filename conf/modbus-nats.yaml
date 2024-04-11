@@ -17,8 +17,6 @@ transformations:
     connections:
       incoming-connection:
         - Modbus-connection
-      incoming-topic: null
-      incoming-format: null
       outgoing-connection:
         - MQTT-connection
       outgoing-topic: event/myevent
@@ -32,13 +30,6 @@ transformations:
         }, "dateTime": null, "potentiallySuperseded": false }, "interval": {
         "duration": { "lpc:mapping": { "path": "32002", "type": "integer" } },
         "start": null } } '
-    to-incoming:
-      to-topic: ""
-      retry-count: null
-      message: ""
-      modbus-function-code: null
-      modbus-device-id: null
-      modbus-registers: [ ]
     interval-request:
       interval: 3000
       request:
@@ -49,14 +40,8 @@ transformations:
         modbus-device-id: 1
         modbus-registers:
           - register-address: 32000
-            path: null
             type: int8
-            pattern: null
-            values: [ ]
           - register-address: 32002
-            path: null
             type: int8
-            pattern: null
-            values: [ ]
 version: 2.0.0
 timestamp: 2024-04-10T15:05:34.759Z
