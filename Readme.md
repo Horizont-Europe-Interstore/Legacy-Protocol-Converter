@@ -382,6 +382,7 @@ JSON IncomingEvent:
 XML IEEE2030.5 Event:
 
 ```xml
+
 <Event>
     <creationTime>1702909917932</creationTime>
     <EventStatus>
@@ -487,6 +488,7 @@ For showcasing this we will use the example above but IncomingEvent in XML forma
 XML IncomingEvent:
 
 ```xml
+
 <IncomingEvent>
     <datetime>28-08-2023 12:00:35</datetime>
     <status>active</status>
@@ -620,8 +622,9 @@ connections:
     reconnect: true
   - name: Modbus-connection
     type: Modbus
-    host: localhost
-    port: 502
+    device: /dev/ttya
+    baud-rate: 9600
+    data-bits: 8
 transformations:
   - name: XML IncomingEvent to JSON IEEE2030.5 Event
     description: Example showing transformation of messages from XML to JSON
@@ -747,33 +750,67 @@ If using different configuration, one should specify the location of the configu
 
 ### JAR
 
-Build the JAR: ```mvn clean package```
+Build the JAR:
+
+```bash
+mvn clean package
+```
 
 **OPTIONAL** If using the custom configuration file for the logging,
 then the environment variable with the path to the file must be
 set: `KUMULUZEE_LOGS_CONFIGFILELOCATION=path/to/file/log4j2.xml`
 
-Deploy the application: ```java -jar transformation-framework/target/transformation-framework-1.0.jar```
+Deploy the application:
+
+```bash
+java -jar transformation-framework/target/transformation-framework-1.0.jar
+```
 
 This will take the configuration files from ```./conf``` folder. If you want to specify a different folder, you can do
 so by providing the path as an argument:
 
-```java -jar transformation -DCONFIGURATION=/path/to/config  transformation-framework/target/transformation-framework-1.0.jar```
+```bash
+java -jar transformation -DCONFIGURATION=/path/to/config  transformation-framework/target/transformation-framework-1.0.jar
+```
 
 This will take the configuration files from ```/path/to/config``` folder.
 
 ### Docker
 
-Build the JAR: ```mvn clean package```
+Build the JAR:
 
-Build the Docker image: ```docker build -t lpc:latest .```
+```bash
+mvn clean package
+```
+
+Build the Docker image:
+
+```bash
+docker build -t lpc:latest .
+```
 
 **OPTIONAL** If using the custom configuration file for the logging, then this file must be mounted to the container
 before running it.
 It must be mounted to `/app/log-config/log4j2.xml` like this:
 
-`docker run -v /path/to/log4j2.xml:/app/log-config/log4j2.xml lpc:latest`
+```bash
+docker run -v /path/to/log4j2.xml:/app/log-config/log4j2.xml lpc:latest
+```
 
-Run the Docker container and mount configuration folder: ```docker run -v /path/to/config:/app/conf lpc:latest```
+Run the Docker container and mount configuration folder:
+
+```bash
+docker run -v /path/to/config:/app/conf lpc:latest
+```
 
 Pre-built Docker images are available here: https://hub.docker.com/r/interstore/legacy-protocol-converter
+
+### How to start NATS server in Docker
+
+To start NATS server in Docker, you can use the following command:
+
+```bash
+docker run -d --name nats-main -p 4222:4222 -p 6222:6222 -p 8222:8222 nats:latest
+```
+
+Then in order for the LPC to connect to the NATS server, you must configure the two containers to use the same network.
