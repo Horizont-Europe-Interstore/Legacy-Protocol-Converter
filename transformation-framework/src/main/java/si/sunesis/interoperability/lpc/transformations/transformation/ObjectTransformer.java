@@ -32,10 +32,10 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
-import si.sunesis.interoperability.lpc.transformations.mappers.AbstractMapper;
-import si.sunesis.interoperability.lpc.transformations.mappers.XMLMapper;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ModbusModel;
+import si.sunesis.interoperability.lpc.transformations.mappers.AbstractMapper;
 import si.sunesis.interoperability.lpc.transformations.mappers.JSONMapper;
+import si.sunesis.interoperability.lpc.transformations.mappers.XMLMapper;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.xml.XMLConstants;
@@ -74,11 +74,15 @@ public class ObjectTransformer {
         if (mappingDefinition == null) {
             return null;
         }
+
+        log.info("Pre replace 1: {}", mappingDefinition);
+        mappingDefinition = mappingDefinition.replace("$timestamp", String.valueOf(System.currentTimeMillis()));
+        log.info("Post replace 1: {}", mappingDefinition);
+        mappingDefinition = mappingDefinition.replace("\"$timestamp\"", String.valueOf(System.currentTimeMillis()));
+        log.info("Post replace 2: {}", mappingDefinition);
+
         try {
             if (objectInput instanceof String input) {
-                mappingDefinition = mappingDefinition.replace("$timestamp", String.valueOf(System.currentTimeMillis()));
-                mappingDefinition = mappingDefinition.replace("\"$timestamp\"", String.valueOf(System.currentTimeMillis()));
-
                 JsonNode jsonNode = isValidJson(input);
 
                 if (jsonNode != null) {
@@ -135,6 +139,11 @@ public class ObjectTransformer {
                 String value = jsonMapper.getMappedValueJSON(jsonNode);
 
                 log.debug("Added value for register: {} with value: {}", modbusModel.getAddress(), value);
+
+                if (value == null) {
+                    result.put(modbusModel.getAddress(), null);
+                    continue;
+                }
 
                 result.put(modbusModel.getAddress(), Long.parseLong(value));
             }
@@ -212,7 +221,7 @@ public class ObjectTransformer {
 
             log.debug("path: {}, value: {}", mapper.getPath(), value);
 
-            if(value == null) {
+            if (value == null) {
                 value = "null";
             }
 

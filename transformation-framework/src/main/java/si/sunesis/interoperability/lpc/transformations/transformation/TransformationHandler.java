@@ -35,6 +35,7 @@ import si.sunesis.interoperability.modbus.ModbusClient;
 
 import java.text.ParseException;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -63,7 +64,7 @@ public class TransformationHandler {
         this.objectTransformer = objectTransformer;
         this.connections = connections;
 
-        log.debug("Transformation: {}", transformation.getName());
+        log.info("Transformation: {}", transformation.getName());
     }
 
     public void handle() {
@@ -103,7 +104,6 @@ public class TransformationHandler {
         for (ModbusClient client : connections.getModbusConnections(incomingConnectionNames).values()) {
             try {
                 client.getClient().connect();
-                log.debug("Modbus client: {}", client.getClient().isConnected());
             } catch (ModbusIOException ignored) {
             }
         }
@@ -150,13 +150,13 @@ public class TransformationHandler {
                 for (RequestHandler outgoingConnection : outgoingConnections) {
                     outgoingConnection.subscribe(outgoingTopic, message -> {
                         String msg = new String((byte[]) message);
-                        log.debug("Incoming message from server: \n{}", msg);
+                        log.info("Incoming message from server: \n{}", msg);
 
                         String transformedMessage = objectTransformer.transform(msg,
                                 transformation.getToIncoming().getMessage(),
                                 transformation.getConnections().getOutgoingFormat(),
                                 transformation.getConnections().getIncomingFormat());
-                        log.debug("Transformed message: \n{}", transformedMessage);
+                        log.info("Transformed message: \n{}", transformedMessage);
 
                         String toTopic = transformation.getToIncoming().getToTopic();
                         toTopic = replacePlaceholders(toTopic);
@@ -181,7 +181,7 @@ public class TransformationHandler {
                 for (RequestHandler outgoingConnection : outgoingConnections) {
                     outgoingConnection.subscribe(outgoingTopic, message -> {
                         String msg = new String((byte[]) message);
-                        log.debug("Incoming message from server for modbus: {}", msg);
+                        log.info("Incoming message from server for modbus: {}", msg);
                         try {
                             buildModbusRequests(msg, incomingModbusConnections, outgoingConnections, messageModel);
                         } catch (ModbusNumberException | ParseException e) {
@@ -226,6 +226,10 @@ public class TransformationHandler {
                                    MessageModel messageModel) {
         Map<ModbusModel, ModbusRequest> failed = new HashMap<>();
 
+        CountDownLatch latch = new CountDownLatch(messageModel.getModbusRegisters().size());
+
+        log.debug("Building Modbus requests...");
+
         for (ModbusModel modbusModel : messageModel.getModbusRegisters()) {
             ModbusRequest[] request = new ModbusRequest[1];
             try {
@@ -235,13 +239,24 @@ public class TransformationHandler {
                         ModbusHandler.handleModbusResponse(msg, registerMap, modbusModel, messageModel);
                     } catch (IllegalDataAddressException e) {
                         log.error("Illegal data address", e);
+                    } finally {
+                        latch.countDown();
                     }
                 });
             } catch (HandlerException e) {
+                log.error("Error handling modbus request", e);
+                latch.countDown();
                 failed.put(modbusModel, request[0]);
             } catch (ModbusNumberException e) {
+                latch.countDown();
                 log.error("Error building modbus request", e);
             }
+        }
+
+        try {
+            latch.await(1100 * messageModel.getModbusRegisters().size(), TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            log.error("Error waiting for latch", e);
         }
 
         if (messageModel.getRetryCount() > 0) {
@@ -311,7 +326,7 @@ public class TransformationHandler {
                     .newScheduledThreadPool(5);
             executorService.scheduleAtFixedRate(() -> {
                 try {
-                    log.debug("Publishing interval request");
+                    log.info("Publishing interval request");
                     String message = transformation.getIntervalRequest().getRequest().getMessage();
 
                     String toTopic = transformation.getIntervalRequest().getRequest().getToTopic();
@@ -338,7 +353,7 @@ public class TransformationHandler {
         ScheduledExecutorService executorService = Executors
                 .newSingleThreadScheduledExecutor();
         executorService.scheduleAtFixedRate(() -> {
-            log.debug("Publishing Modbus interval request");
+            log.info("Publishing Modbus interval request");
             MessageModel messageModel = transformation.getIntervalRequest().getRequest();
 
             try {
@@ -374,7 +389,7 @@ public class TransformationHandler {
                         transformation.getToOutgoing().getMessage(),
                         transformation.getConnections().getIncomingFormat(),
                         transformation.getConnections().getOutgoingFormat());
-                log.debug("Transformed message: {}", transformedMessage);
+                log.info("Transformed message: {}", transformedMessage);
 
                 String toTopic = transformation.getToOutgoing().getToTopic();
                 toTopic = replacePlaceholders(toTopic);
