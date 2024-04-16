@@ -854,3 +854,7 @@ docker run -d --name nats-main -p 4222:4222 -p 6222:6222 -p 8222:8222 nats:lates
 ```
 
 Then in order for the LPC to connect to the NATS server, you must configure the two containers to use the same network.
+
+## License
+
+MIT
