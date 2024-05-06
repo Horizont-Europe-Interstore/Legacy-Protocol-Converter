@@ -1,5 +1,6 @@
 package si.sunesis.interoperability.lpc.transformations;
 
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
@@ -18,10 +19,11 @@ import java.nio.file.Files;
 @Path("/lpc")
 public class LegacyProtocolConverterResource extends Application {
 
+    @SneakyThrows
     @POST
     @Path("/config")
-    public Response uploadFile(
-            @FormDataParam("file") InputStream uploadedInputStream) {
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    public Response uploadFile(@FormDataParam("file") InputStream file) {
         String configuration = System.getenv("CONFIGURATION");
 
         if (configuration == null) {
@@ -35,7 +37,7 @@ public class LegacyProtocolConverterResource extends Application {
         File dir = new File(configuration);
 
         //Your local disk path where you want to store the file
-        String uploadedFileLocation = dir.getAbsolutePath() + File.pathSeparator + "config.yaml";
+        String uploadedFileLocation = dir.getAbsolutePath() + File.separator + "config.yaml";
         log.info("File location: {}", uploadedFileLocation);
         // save it
         try {
@@ -44,7 +46,7 @@ public class LegacyProtocolConverterResource extends Application {
             log.error("Error deleting file", e);
         }
 
-        saveToFile(uploadedInputStream, uploadedFileLocation);
+        saveToFile(file, uploadedFileLocation);
 
         String output = "File uploaded via Jersey based RESTFul Webservice to: " + uploadedFileLocation;
 
