@@ -67,7 +67,7 @@ public class Configuration {
             }
 
             for (File file : Objects.requireNonNull(dir.listFiles())) {
-                if (file.getName().endsWith(".yaml")) {
+                if (file.getName().endsWith(".yaml") || file.getName().endsWith(".yml")) {
                     log.info("Reading configuration: {}", file.getName());
                     String fileContent = readFromInputStream(new FileInputStream(file));
                     ConfigurationModel configurationModel = objectMapper.readValue(

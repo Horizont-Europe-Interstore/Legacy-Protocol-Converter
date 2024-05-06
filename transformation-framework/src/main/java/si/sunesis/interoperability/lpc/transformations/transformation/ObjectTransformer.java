@@ -75,11 +75,8 @@ public class ObjectTransformer {
             return null;
         }
 
-        log.info("Pre replace 1: {}", mappingDefinition);
         mappingDefinition = mappingDefinition.replace("$timestamp", String.valueOf(System.currentTimeMillis()));
-        log.info("Post replace 1: {}", mappingDefinition);
         mappingDefinition = mappingDefinition.replace("\"$timestamp\"", String.valueOf(System.currentTimeMillis()));
-        log.info("Post replace 2: {}", mappingDefinition);
 
         try {
             if (objectInput instanceof String input) {

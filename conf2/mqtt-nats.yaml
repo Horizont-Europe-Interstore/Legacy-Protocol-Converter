@@ -31,26 +31,26 @@ transformations:
       outgoing-format: XML
     to-outgoing:
       to-topic: device/status
-      message: '
-        <DeviceStatus xmlns="http://ieee.org/2030.5">
+      message: "
+        <DeviceStatus xmlns=\"http://ieee.org/2030.5\">
           <changedTime>$timestamp</changedTime>
           <onCount>
             <lpc:mapping>
-              <path type="int">/status/count</path>
+              <path type=\"int\">/status/count</path>
             </lpc:mapping>
           </onCount>
           <opState>
              <lpc:mapping>
-              <path type="int">/status/state</path>
+              <path type=\"int\">/status/state</path>
             </lpc:mapping>
           </opState>
           <opTime>
             <lpc:mapping>
-              <path type="int">/status/time</path>
+              <path type=\"int\">/status/time</path>
             </lpc:mapping>
           </opTime>
         </DeviceStatus>
-      '
+      "
   - name: XML PowerConfiguration to JSON IEEE2030.5 PowerConfiguration
     description: Example showing transformation of messages from XML to JSON
     connections:

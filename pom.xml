@@ -86,7 +86,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
+            
             <!-- JAXB -->
             <dependency>
                 <groupId>jakarta.xml.bind</groupId>
