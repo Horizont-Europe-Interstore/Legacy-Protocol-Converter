@@ -1,6 +1,6 @@
-# Legacy Systems Protocol Converter (LPC)
+# Legacy Systems Protocol Converter for IEEE2030.5
 
-The Legacy Systems Protocol Converter, initially developed within the Horizon Europe Interstore project, acts as a
+The Legacy Systems Protocol Converter (LPC), initially developed within the Horizon Europe Interstore project, acts as a
 middleware, allowing devices that use different communication protocols to exchange data with EMS systems that use the
 IEEE2030.5 standard. It supports:
 
