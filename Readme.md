@@ -748,6 +748,15 @@ Separate log file for Legacy Protocol Converter is created in order for easier t
 
 If using different configuration, one should specify the location of the configuration.
 
+Logs are stored in the folder `logs` in the root of the project. If you are using Docker, logs are stored in the
+container. You can also mount the `logs` folder to the container to store `logs` on the host machine such as:
+    
+```bash
+docker run -v /path/to/logs:/app/logs -v /path/to/config:/app/conf lpc:latest
+```
+
+This will mount the logs folder `/path/to/logs` to the container and `logs` will be available on the host machine.
+
 ### Building and running the LPC using JAR
 
 Build the JAR:
