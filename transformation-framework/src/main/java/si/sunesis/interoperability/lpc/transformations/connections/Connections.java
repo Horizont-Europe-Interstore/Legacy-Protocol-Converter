@@ -44,9 +44,6 @@ import si.sunesis.interoperability.nats.NatsRequestHandler;
 import si.sunesis.interoperability.rabbitmq.ChannelHandler;
 import si.sunesis.interoperability.rabbitmq.RabbitMQClient;
 
-import javax.annotation.PostConstruct;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
@@ -66,17 +63,21 @@ import java.util.concurrent.TimeoutException;
  * @since 1.0.0
  */
 @Slf4j
-@ApplicationScoped
 public class Connections {
 
-    @Inject
-    private Configuration configuration;
+    private final Configuration configuration;
 
     @Getter
     private final Map<String, RequestHandler> connectionsMap = new HashMap<>();
 
-    @PostConstruct
+    public Connections(Configuration configuration) {
+        this.configuration = configuration;
+        init();
+    }
+
     public void init() {
+        connectionsMap.clear();
+
         List<ConnectionModel> yamlConnections = configuration.getConfigurations().stream()
                 .flatMap(item -> item.getConnections().stream())
                 .toList();

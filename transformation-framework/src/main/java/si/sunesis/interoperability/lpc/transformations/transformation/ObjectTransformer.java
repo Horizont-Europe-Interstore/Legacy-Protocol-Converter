@@ -49,10 +49,10 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.StringWriter;
 import java.text.ParseException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -75,8 +75,17 @@ public class ObjectTransformer {
             return null;
         }
 
-        mappingDefinition = mappingDefinition.replace("$timestamp", String.valueOf(System.currentTimeMillis()));
-        mappingDefinition = mappingDefinition.replace("\"$timestamp\"", String.valueOf(System.currentTimeMillis()));
+        long millisecond = System.currentTimeMillis();
+        String patternZ = "yyyy-MM-dd'T'HH:mm:ss'Z'";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(patternZ);
+        Date date = new Date(millisecond);
+        LocalDateTime ldt = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+        String timestampZ = String.format("\"%s\"", ldt.format(formatter));
+
+        mappingDefinition = mappingDefinition.replace("\"$timestampZ\"", timestampZ);
+        mappingDefinition = mappingDefinition.replace("$timestampZ", timestampZ);
+        mappingDefinition = mappingDefinition.replace("\"$timestamp\"", String.valueOf(millisecond));
+        mappingDefinition = mappingDefinition.replace("$timestamp", String.valueOf(millisecond));
 
         try {
             if (objectInput instanceof String input) {
@@ -165,10 +174,8 @@ public class ObjectTransformer {
 
     private String transformToXML(Object input, Document mappedDocument) throws ParseException {
         NodeList flowList = mappedDocument.getElementsByTagName(MAPPING_NAME);
-        log.debug("flowList: {}", flowList.getLength());
         while (flowList.getLength() != 0) {
             for (int i = 0; i < flowList.getLength(); i++) {
-                log.debug("i: {}, length: {}", i, flowList.getLength());
                 Node parentNode = flowList.item(i).getParentNode();
 
                 Node mappingNode = flowList.item(i);

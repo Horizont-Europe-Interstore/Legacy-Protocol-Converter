@@ -38,7 +38,7 @@ public class LegacyProtocolConverterResource extends Application {
 
         //Your local disk path where you want to store the file
         String uploadedFileLocation = dir.getAbsolutePath() + File.separator + "config.yaml";
-        log.info("File location: {}", uploadedFileLocation);
+
         // save it
         try {
             Files.deleteIfExists(java.nio.file.Path.of(uploadedFileLocation));
@@ -46,15 +46,19 @@ public class LegacyProtocolConverterResource extends Application {
             log.error("Error deleting file", e);
         }
 
-        saveToFile(file, uploadedFileLocation);
+        boolean success = saveToFile(file, uploadedFileLocation);
 
-        String output = "File uploaded via Jersey based RESTFul Webservice to: " + uploadedFileLocation;
+        if (!success) {
+            return Response.serverError().build();
+        }
 
-        return Response.status(200).entity(output).build();
+        log.info("Uploaded configuration to file location: {}", uploadedFileLocation);
+
+        return Response.ok().build();
     }
 
-    private void saveToFile(InputStream uploadedInputStream,
-                            String uploadedFileLocation) {
+    private boolean saveToFile(InputStream uploadedInputStream,
+                               String uploadedFileLocation) {
         try (OutputStream out = new FileOutputStream(uploadedFileLocation)) {
             int read;
             byte[] bytes = new byte[1024];
@@ -63,8 +67,12 @@ public class LegacyProtocolConverterResource extends Application {
                 out.write(bytes, 0, read);
             }
             out.flush();
+
+            return true;
         } catch (IOException e) {
             log.error("Error saving file", e);
         }
+
+        return false;
     }
 }

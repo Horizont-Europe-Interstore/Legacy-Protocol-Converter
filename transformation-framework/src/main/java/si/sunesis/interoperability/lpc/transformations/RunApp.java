@@ -45,6 +45,6 @@ public class RunApp {
 
     private void begin(@Observes @Initialized(ApplicationScoped.class) Object init) {
         log.debug("Starting application");
-        handler.handleTransformations();
+        handler.startHandling();
     }
 }

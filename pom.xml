@@ -6,7 +6,7 @@
 
     <groupId>si.sunesis.interoperability.lpc</groupId>
     <artifactId>legacy-protocol-converter</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <modules>
         <module>transformation-framework</module>
@@ -28,6 +28,8 @@
         <jaxb-impl.version>4.0.3</jaxb-impl.version>
 
         <jserialcomm.version>2.10.4</jserialcomm.version>
+
+        <common.version>1.0.1-SNAPSHOT</common.version>
     </properties>
 
     <dependencies>
@@ -47,31 +49,31 @@
         <dependency>
             <groupId>si.sunesis.interoperability.common</groupId>
             <artifactId>common</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${common.version}</version>
         </dependency>
 
         <dependency>
             <groupId>si.sunesis.interoperability.common</groupId>
             <artifactId>nats</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${common.version}</version>
         </dependency>
 
         <dependency>
             <groupId>si.sunesis.interoperability.common</groupId>
             <artifactId>mqtt</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${common.version}</version>
         </dependency>
 
         <dependency>
             <groupId>si.sunesis.interoperability.common</groupId>
             <artifactId>modbus</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${common.version}</version>
         </dependency>
 
         <dependency>
             <groupId>si.sunesis.interoperability.common</groupId>
             <artifactId>rabbitmq</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${common.version}</version>
         </dependency>
 
     </dependencies>
