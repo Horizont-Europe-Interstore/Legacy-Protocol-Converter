@@ -3,12 +3,15 @@ package si.sunesis.interoperability.lpc.transformations;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.glassfish.jersey.media.multipart.FormDataParam;
+import si.sunesis.interoperability.lpc.transformations.constants.Constants;
 
 import javax.enterprise.context.RequestScoped;
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Application;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.*;
@@ -23,12 +26,21 @@ public class LegacyProtocolConverterResource extends Application {
     @POST
     @Path("/config")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
-    public Response uploadFile(@FormDataParam("file") InputStream file) {
-        String configuration = System.getenv("CONFIGURATION");
+    public Response uploadFile(@FormDataParam("file") InputStream file, @Context HttpServletRequest req) {
+        String API_KEY = System.getenv(Constants.API_KEY_HEADER);
+        if (API_KEY == null && System.getProperty(Constants.API_KEY_HEADER) != null) {
+            API_KEY = System.getProperty(Constants.API_KEY_HEADER);
+        }
+
+        if (API_KEY == null || !API_KEY.equals(req.getHeader(Constants.API_KEY_HEADER))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        String configuration = System.getenv(Constants.CONFIGURATION_FOLDER);
 
         if (configuration == null) {
-            if (System.getProperty("CONFIGURATION") != null) {
-                configuration = System.getProperty("CONFIGURATION");
+            if (System.getProperty(Constants.CONFIGURATION_FOLDER) != null) {
+                configuration = System.getProperty(Constants.CONFIGURATION_FOLDER);
             } else {
                 configuration = "conf";
             }
