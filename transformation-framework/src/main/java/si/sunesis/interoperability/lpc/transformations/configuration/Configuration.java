@@ -23,6 +23,7 @@ package si.sunesis.interoperability.lpc.transformations.configuration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ConfigurationModel;
 
@@ -30,8 +31,13 @@ import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * @author David Trafela, Sunesis
@@ -44,35 +50,40 @@ public class Configuration {
 
     private final List<ConfigurationModel> configurations = new ArrayList<>();
 
+    private final HashMap<String, Long> lastModified = new HashMap<>();
+
+    @Setter
+    private Consumer<Boolean> consumer;
+
     @PostConstruct
     private void init() {
+        readConf();
+
+        scheduleRead();
+    }
+
+    public void readConf() {
         try {
+            configurations.clear();
+
             ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
             objectMapper.findAndRegisterModules();
 
-            String configuration = System.getenv("CONFIGURATION");
+            File[] files = readFiles();
 
-            if (configuration == null) {
-                if (System.getProperty("CONFIGURATION") != null) {
-                    configuration = System.getProperty("CONFIGURATION");
-                } else {
-                    configuration = "conf";
-                }
-            }
+            for (File file : Objects.requireNonNull(files)) {
+                String name = file.getName();
+                if (name.endsWith(".yaml") || name.endsWith(".yml")) {
+                    log.info("Reading configuration: {}", name);
 
-            File dir = new File(configuration);
+                    lastModified.put(name, file.lastModified());
 
-            if (!dir.exists() || !dir.isDirectory()) {
-                throw new RuntimeException("Configuration directory does not exist");
-            }
-
-            for (File file : Objects.requireNonNull(dir.listFiles())) {
-                if (file.getName().endsWith(".yaml")) {
-                    log.info("Reading configuration: {}", file.getName());
                     String fileContent = readFromInputStream(new FileInputStream(file));
                     ConfigurationModel configurationModel = objectMapper.readValue(
                             fileContent,
                             ConfigurationModel.class);
+
+
                     this.configurations.add(configurationModel);
                 }
             }
@@ -93,5 +104,94 @@ public class Configuration {
         }
 
         return resultStringBuilder.toString();
+    }
+
+    private File[] readFiles() {
+        String configuration = getConfFolderName();
+
+        File dir = new File(configuration);
+
+        if (!dir.exists() || !dir.isDirectory()) {
+            throw new RuntimeException("Configuration directory does not exist");
+        }
+
+        return dir.listFiles();
+    }
+
+    private String getConfFolderName() {
+        String configuration = System.getenv("CONFIGURATION");
+
+        if (configuration == null) {
+            if (System.getProperty("CONFIGURATION") != null) {
+                configuration = System.getProperty("CONFIGURATION");
+            } else {
+                configuration = "conf";
+            }
+        }
+
+        return configuration;
+    }
+
+    private void scheduleRead() {
+        String configuration = getConfFolderName();
+        ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(1);
+        executorService.scheduleAtFixedRate(() -> {
+            log.info("Checking for changes in the configuration folder {}", configuration);
+            try {
+                File[] files = readFiles();
+
+                boolean newConf = false;
+
+                for (File file : Objects.requireNonNull(files)) {
+                    String name = file.getName();
+                    log.debug("Checking file: {}", name);
+                    if (name.endsWith(".yaml") || name.endsWith(".yml")) {
+                        if (lastModified.containsKey(name)) {
+                            if (lastModified.get(name) != file.lastModified()) {
+                                newConf = true;
+                                log.debug("Configuration file changed: {}", name);
+                            }
+                        } else {
+                            newConf = true;
+                            log.debug("New configuration file: {}", name);
+                        }
+
+                        lastModified.put(name, file.lastModified());
+                        if (newConf) {
+                            break;
+                        }
+                    }
+                }
+
+                if (files.length != lastModified.size()) {
+                    newConf = true;
+
+                    log.debug("Checking for any configuration that were removed");
+                    // Delete keys from lastModified that are not in files array
+                    for (String key : new ArrayList<>(lastModified.keySet())) {
+                        boolean found = false;
+                        for (File file : files) {
+                            if (file.getName().equals(key)) {
+                                found = true;
+                                break;
+                            }
+                        }
+
+                        if (!found) {
+                            log.debug("Configuration file removed: {}", key);
+                            lastModified.remove(key);
+                        }
+                    }
+                }
+
+                if (newConf) {
+                    log.debug("New configuration detected. Reloading configurations...");
+                    readConf();
+                    consumer.accept(true);
+                }
+            } catch (Exception e) {
+                log.error("Error reading configuration", e);
+            }
+        }, 60, 30, TimeUnit.SECONDS);
     }
 }

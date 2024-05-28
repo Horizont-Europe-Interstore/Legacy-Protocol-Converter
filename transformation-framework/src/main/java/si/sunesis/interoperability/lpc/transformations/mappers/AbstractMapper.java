@@ -99,7 +99,7 @@ public abstract class AbstractMapper {
             XPathExpression expr = xpath.compile(statusXPath);
             String value = (String) expr.evaluate(xmlInput, XPathConstants.STRING);
 
-            log.debug("Value at XML path '" + statusXPath + "': " + value);
+            log.debug("Value at XML path {} : {}", statusXPath, value);
 
             return getValue(value);
         } catch (Exception e) {
@@ -125,10 +125,10 @@ public abstract class AbstractMapper {
 
         // Check if the result node exists
         if (!resultNode.isMissingNode()) {
-            log.debug("Value at JSON path '" + getPath() + "': " + resultNode);
+            log.debug("Value at JSON path {} : {}", getPath(), resultNode);
             return getValue(resultNode.asText());
         } else {
-            log.debug("No value found at JSON path '" + getPath() + "'");
+            log.debug("No value found at JSON path {}", getPath());
         }
 
         return "null";

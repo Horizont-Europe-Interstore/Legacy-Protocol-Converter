@@ -35,10 +35,7 @@ import si.sunesis.interoperability.modbus.ModbusClient;
 
 import java.text.ParseException;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -59,6 +56,11 @@ public class TransformationHandler {
 
     private final List<RequestHandler> outgoingConnections = new ArrayList<>();
 
+    ScheduledExecutorService executorService = Executors
+            .newScheduledThreadPool(5);
+    private ScheduledFuture<?> modbusScheduledFuture;
+    private ScheduledFuture<?> scheduledFuture;
+
     public TransformationHandler(TransformationModel transformation, ObjectTransformer objectTransformer, Connections connections) {
         this.transformation = transformation;
         this.objectTransformer = objectTransformer;
@@ -72,6 +74,24 @@ public class TransformationHandler {
         handleOutgoingTransformations();
         handleIncomingTransformations();
         handleIntervalRequests();
+    }
+
+    public void destroy() {
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(false);
+            scheduledFuture = null;
+        }
+        if (modbusScheduledFuture != null) {
+            modbusScheduledFuture.cancel(false);
+            modbusScheduledFuture = null;
+        }
+
+        for (Map.Entry<String, RequestHandler> entry : connections.getConnectionsMap().entrySet()) {
+            entry.getValue().disconnect();
+        }
+
+        incomingConnections.clear();
+        outgoingConnections.clear();
     }
 
     private void handleConnections() {
@@ -322,9 +342,8 @@ public class TransformationHandler {
 
             Integer interval = transformation.getIntervalRequest().getInterval();
 
-            ScheduledExecutorService executorService = Executors
-                    .newScheduledThreadPool(5);
-            executorService.scheduleAtFixedRate(() -> {
+
+            scheduledFuture = executorService.scheduleAtFixedRate(() -> {
                 try {
                     log.info("Publishing interval request");
                     String message = transformation.getIntervalRequest().getRequest().getMessage();
@@ -350,9 +369,7 @@ public class TransformationHandler {
 
         Integer interval = transformation.getIntervalRequest().getInterval();
 
-        ScheduledExecutorService executorService = Executors
-                .newSingleThreadScheduledExecutor();
-        executorService.scheduleAtFixedRate(() -> {
+        modbusScheduledFuture = executorService.scheduleAtFixedRate(() -> {
             log.info("Publishing Modbus interval request");
             MessageModel messageModel = transformation.getIntervalRequest().getRequest();
 

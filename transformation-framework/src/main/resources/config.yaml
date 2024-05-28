@@ -5,4 +5,4 @@ kumuluzee:
       port: 9094
   version: 1.0
   env:
-    name: dev
+    name: prod

@@ -31,6 +31,7 @@ import si.sunesis.interoperability.lpc.transformations.connections.Connections;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import java.util.ArrayList;
 
 /**
  * @author David Trafela, Sunesis
@@ -46,10 +47,15 @@ public class TransformationsHandler {
     @Inject
     private ObjectTransformer objectTransformer;
 
-    @Inject
-    private Connections connections;
+    private final ArrayList<TransformationHandler> transformationHandlers = new ArrayList<>();
 
-    public void handleTransformations() {
+    public void startHandling() {
+        configuration.setConsumer(this::restart);
+        handleTransformations();
+    }
+
+    private void handleTransformations() {
+        Connections connections = new Connections(configuration);
         for (ConfigurationModel configurationModel : configuration.getConfigurations()) {
             RegistrationModel registration = configurationModel.getRegistration();
 
@@ -66,8 +72,18 @@ public class TransformationsHandler {
 
             for (TransformationModel transformationModel : configurationModel.getTransformations()) {
                 TransformationHandler handler = new TransformationHandler(transformationModel, objectTransformer, connections);
+                transformationHandlers.add(handler);
                 handler.handle();
             }
         }
+    }
+
+    private void restart(Boolean b) {
+        for (TransformationHandler handler : transformationHandlers) {
+            handler.destroy();
+        }
+
+        transformationHandlers.clear();
+        handleTransformations();
     }
 }

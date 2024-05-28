@@ -544,7 +544,7 @@ transformations:
     to-outgoing:
       to-topic: event/send
       message: '{
-            "creationTime": $timestamp,
+            "creationTime": "$timestamp",
             "eventStatus": {
                 "currentStatus": {
                   "lpc:mapping": {
@@ -638,7 +638,7 @@ transformations:
     to-outgoing:
       to-topic: event/send
       message: '{
-            "creationTime": $timestamp,
+            "creationTime": "$timestamp",
             "EventStatus": {
                 "currentStatus": {
                   "lpc:mapping": {
@@ -824,14 +824,14 @@ here: https://github.com/Horizont-Europe-Interstore/Legacy-Protocol-Converter/bl
 You can download the JAR file and then run the following command to start the LPC:
 
 ```bash
-java -jar lpc-1.0.jar
+java -jar lpc-1.0.1.jar
 ```
 
 This will take the configuration files from ```./conf``` folder. If you want to specify a different folder, you can do
 so by providing the path as an argument:
 
 ```bash
-java -DCONFIGURATION=/path/to/config -jar lpc-1.0.jar
+java -DCONFIGURATION=/path/to/config -jar lpc-1.0.1.jar
 ```
 
 This will take the configuration files from ```/path/to/config``` folder.
