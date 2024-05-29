@@ -40,20 +40,20 @@ transformations:
       retry-count: 3
       to-topic: devices/64f68866-6d97-4b7a-8794-439c14ffb345/attributes/999f0191-a8eb-44c0-a4ec-0100c176402b/monitor
       message: '{
-        "value": {
-          "lpc:mapping": {
-            "path": "/my_value",
-            "type": "float"
+          "value": {
+            "lpc:mapping": {
+              "path": "/my_value",
+              "type": "float"
+            }
+          },
+          "timestamp": {
+            "lpc:mapping": {
+              "path": "/timestamp",
+              "type": "datetime",
+              "pattern": "yyyy-MM-dd\"T\"HH:mm:ss\"Z\""
+            }
           }
-        },
-        "timestamp": {
-          "lpc:mapping": {
-            "path": "/timestamp",
-            "type": "datetime",
-            "pattern": "yyyy-MM-dd\"T\"HH:mm:ss\"Z\""
-          }
-        }
-      }'
+        }'
     interval-request:
       interval: 10000 # in milliseconds
       request:
