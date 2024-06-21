@@ -22,50 +22,45 @@ transformations:
       incoming-format: XML
       outgoing-connection:
         - NATS-connection
+      outgoing-topic: event/myevent
       outgoing-format: JSON
     to-outgoing:
       to-topic: event/myevent
-      message: |-
-        {
-          "creationTime": "$timestamp",
-          "eventStatus": {
-            "currentStatus": {
-              "lpc:mapping": {
-                "path": "/IncomingEvent/status",
-                "type": "integer",
-                "values": [
-                  "scheduled",
-                  "active",
-                  "cancelled",
-                  "cancelled_with_r",
-                  "superseded"
-                ]
-              }
-            },
-            "dateTime": {
-              "lpc:mapping": {
-                "path": "/IncomingEvent/datetime",
-                "type": "datetime",
-                "pattern": "dd-MM-yyyy HH:mm:ss"
-              }
-            },
-            "potentiallySuperseded": false
-          },
-          "interval": {
-            "duration": {
-              "lpc:mapping": {
-                "path": "/IncomingEvent/duration",
-                "type": "integer"
-              }
-            },
-            "start": {
-              "lpc:mapping": {
-                "path": "/IncomingEvent/start",
-                "type": "date",
-                "pattern": "dd-MM-yyyy"
-              }
+      message: '{
+        "creationTime": $timestamp,
+        "eventStatus": {
+          "currentStatus": {
+            "lpc:mapping": {
+              "path": "/IncomingEvent/status",
+              "type": "integer",
+              "values": [ "scheduled", "active", "cancelled", "cancelled_with_r", "superseded" ]
             }
-          }
+          },
+          "dateTime": {
+            "lpc:mapping": {
+              "path": "/IncomingEvent/datetime",
+              "type": "datetime",
+              "pattern": "dd-MM-yyyy HH:mm:ss"
+            }
+          },
+          "potentiallySuperseded": false
+        },
+                         "interval": {
+                           "duration": {
+                             "lpc:mapping": {
+                               "path": "/IncomingEvent/duration",
+                               "type": "integer"
+                             }
+                           },
+                           "start": {
+                             "lpc:mapping": {
+                               "path": "/IncomingEvent/start",
+                               "type": "date",
+                               "pattern": "dd-MM-yyyy"
+                             }
+                           }
+                         }
         }
+        '
 version: 1.0.1
 
