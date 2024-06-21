@@ -130,7 +130,7 @@ public class TransformationHandler {
     }
 
     private void handleOutgoingTransformations() {
-        if (transformation.getToOutgoing() != null) {
+        if (transformation.getToOutgoing() != null && transformation.getConnections().getIncomingTopic() != null) {
             String incomingTopic = transformation.getConnections().getIncomingTopic();
             incomingTopic = replacePlaceholders(incomingTopic);
 
@@ -162,7 +162,7 @@ public class TransformationHandler {
                 ((transformation.getToIncoming().getToTopic() != null && !transformation.getToIncoming().getToTopic().isEmpty())
                         || (transformation.getToIncoming().getModbusRegisters() != null && !transformation.getToIncoming().getModbusRegisters().isEmpty()));
 
-        if (toIncoming) {
+        if (toIncoming && transformation.getConnections().getOutgoingTopic() != null) {
             if (!isModbus()) {
                 String outgoingTopic = transformation.getConnections().getOutgoingTopic();
                 outgoingTopic = replacePlaceholders(outgoingTopic);
@@ -342,7 +342,6 @@ public class TransformationHandler {
 
             Integer interval = transformation.getIntervalRequest().getInterval();
 
-
             scheduledFuture = executorService.scheduleAtFixedRate(() -> {
                 try {
                     log.info("Publishing interval request");
@@ -401,7 +400,7 @@ public class TransformationHandler {
 
             sendModbusRequest(modbusClient, msgToRegisterMap, registerMap, messageModel);
 
-            if (transformation.getToOutgoing() != null) {
+            if (transformation.getToOutgoing() != null && !registerMap.isEmpty()) {
                 String transformedMessage = objectTransformer.transform(registerMap,
                         transformation.getToOutgoing().getMessage(),
                         transformation.getConnections().getIncomingFormat(),

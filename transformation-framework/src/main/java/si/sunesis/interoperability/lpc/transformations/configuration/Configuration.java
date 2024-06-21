@@ -26,6 +26,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ConfigurationModel;
+import si.sunesis.interoperability.lpc.transformations.constants.Constants;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -83,7 +84,6 @@ public class Configuration {
                             fileContent,
                             ConfigurationModel.class);
 
-
                     this.configurations.add(configurationModel);
                 }
             }
@@ -119,11 +119,11 @@ public class Configuration {
     }
 
     private String getConfFolderName() {
-        String configuration = System.getenv("CONFIGURATION");
+        String configuration = System.getenv(Constants.CONFIGURATION_FOLDER);
 
         if (configuration == null) {
-            if (System.getProperty("CONFIGURATION") != null) {
-                configuration = System.getProperty("CONFIGURATION");
+            if (System.getProperty(Constants.CONFIGURATION_FOLDER) != null) {
+                configuration = System.getProperty(Constants.CONFIGURATION_FOLDER);
             } else {
                 configuration = "conf";
             }

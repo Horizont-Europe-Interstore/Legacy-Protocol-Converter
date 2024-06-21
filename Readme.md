@@ -772,14 +772,14 @@ set: `KUMULUZEE_LOGS_CONFIGFILELOCATION=path/to/file/log4j2.xml`
 Deploy the application:
 
 ```bash
-java -jar transformation-framework/target/transformation-framework-1.0.jar
+java -jar transformation-framework/target/legacy-protocol-converter.jar
 ```
 
 This will take the configuration files from ```./conf``` folder. If you want to specify a different folder, you can do
 so by providing the path as an argument:
 
 ```bash
-java -DCONFIGURATION=/path/to/config -jar transformation-framework/target/transformation-framework-1.0.jar
+java -DCONFIGURATION=/path/to/config -jar transformation-framework/target/legacy-protocol-converter.jar
 ```
 
 This will take the configuration files from ```/path/to/config``` folder.
@@ -819,19 +819,19 @@ Pre-built Docker images are available here: https://hub.docker.com/r/interstore/
 JRE 17 is required to run the JAR file.
 
 JAR file is located in the official GitHub repository of LPC
-here: https://github.com/Horizont-Europe-Interstore/Legacy-Protocol-Converter/blob/master/lpc-1.0.jar
+here: https://github.com/Horizont-Europe-Interstore/Legacy-Protocol-Converter/blob/master/legacy-protocol-converter.jar
 
 You can download the JAR file and then run the following command to start the LPC:
 
 ```bash
-java -jar lpc-1.0.1.jar
+java -jar legacy-protocol-converter.jar
 ```
 
 This will take the configuration files from ```./conf``` folder. If you want to specify a different folder, you can do
 so by providing the path as an argument:
 
 ```bash
-java -DCONFIGURATION=/path/to/config -jar lpc-1.0.1.jar
+java -DCONFIGURATION=/path/to/config -jar legacy-protocol-converter.jar
 ```
 
 This will take the configuration files from ```/path/to/config``` folder.
