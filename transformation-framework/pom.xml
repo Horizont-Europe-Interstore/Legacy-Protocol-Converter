@@ -24,6 +24,11 @@
             <groupId>com.kumuluz.ee</groupId>
             <artifactId>kumuluzee-cdi-weld</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.kumuluz.ee.cors</groupId>
+            <artifactId>kumuluzee-cors</artifactId>
+        </dependency>
+
 
         <dependency>
             <groupId>jakarta.xml.bind</groupId>
@@ -50,6 +55,7 @@
     </dependencies>
 
     <build>
+        <finalName>${project.parent.artifactId}</finalName>
         <plugins>
             <plugin>
                 <groupId>com.kumuluz.ee</groupId>

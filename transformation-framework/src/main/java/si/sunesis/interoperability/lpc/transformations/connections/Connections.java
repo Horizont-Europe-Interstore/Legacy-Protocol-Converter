@@ -22,6 +22,7 @@ package si.sunesis.interoperability.lpc.transformations.connections;
 
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3ClientBuilder;
+import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5ClientBuilder;
 import com.intelligt.modbus.jlibmodbus.Modbus;
@@ -184,21 +185,11 @@ public class Connections {
             client = client.automaticReconnectWithDefaultConfig();
         }
 
-        if (connection.getSsl() != null) {
-            client = client.sslWithDefaultConfig();
-        }
-
         if (connection.getUsername() != null && connection.getPassword() != null) {
             client = client.simpleAuth()
                     .username(connection.getUsername())
                     .password(connection.getPassword().getBytes())
                     .applySimpleAuth();
-        }
-
-        if (connection.getSsl().getTrustStore() != null) {
-            client = client.sslConfig()
-                    .trustManagerFactory(buildTrustManagerFactory(connection))
-                    .applySslConfig();
         }
 
         if (connection.getSsl() != null) {
@@ -210,7 +201,7 @@ public class Connections {
                 client = client.sslConfig()
                         .keyManagerFactory(buildKeyManagerFactory(connection))
                         .applySslConfig();
-            } else {
+            } else if (Boolean.TRUE.equals(connection.getSsl().getUseDefault())) {
                 client = client.sslWithDefaultConfig();
             }
         }
@@ -222,7 +213,7 @@ public class Connections {
     }
 
     private Mqtt5Client buildMqtt5Client(ConnectionModel connection) {
-        Mqtt5ClientBuilder client = com.hivemq.client.mqtt.mqtt5.Mqtt5Client.builder()
+       Mqtt5ClientBuilder client = com.hivemq.client.mqtt.mqtt5.Mqtt5Client.builder()
                 .identifier(connection.getName())
                 .serverHost(connection.getHost())
                 .serverPort(connection.getPort())
@@ -231,10 +222,6 @@ public class Connections {
 
         if (Boolean.TRUE.equals(connection.getReconnect())) {
             client = client.automaticReconnectWithDefaultConfig();
-        }
-
-        if (connection.getSsl() != null) {
-            client = client.sslWithDefaultConfig();
         }
 
         if (connection.getUsername() != null && connection.getPassword() != null) {
@@ -257,6 +244,7 @@ public class Connections {
                 client = client.sslWithDefaultConfig();
             }
         }
+
         Mqtt5BlockingClient client1 = client.buildBlocking();
         client1.connect();
 

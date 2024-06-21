@@ -132,6 +132,9 @@ public class ModbusHandler {
     }
 
     protected static void getValueFromRegisters(ReadHoldingRegistersResponse response, Map<Integer, Object> registerMap, ModbusModel modbusModel) throws IllegalDataAddressException {
+        //response.getHoldingRegisters().setBytesLe(response.getHoldingRegisters().getBytes());
+        //response.getHoldingRegisters().setBytesBe(response.getHoldingRegisters().getBytes());
+
         if (modbusModel.getType().contains("int")) {
             if (modbusModel.getType().contains("8")) {
                 registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getInt8At(0));

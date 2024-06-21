@@ -6,3 +6,8 @@ kumuluzee:
   version: 1.0
   env:
     name: dev
+  cors-filter:
+    servlet:
+      enabled: true
+      allow-origin: "*"
+      supported-methods: "GET, POST, PUT, HEAD, OPTIONS, DELETE"

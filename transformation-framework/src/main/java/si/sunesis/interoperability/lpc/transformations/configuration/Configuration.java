@@ -84,7 +84,6 @@ public class Configuration {
                             fileContent,
                             ConfigurationModel.class);
 
-
                     this.configurations.add(configurationModel);
                 }
             }

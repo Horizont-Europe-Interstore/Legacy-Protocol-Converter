@@ -92,6 +92,9 @@ public class ObjectTransformer {
                 JsonNode jsonNode = isValidJson(input);
 
                 if (jsonNode != null) {
+                    if (fromFormat == null || fromFormat.isEmpty()) {
+                        fromFormat = "JSON";
+                    }
                     if (fromFormat.equalsIgnoreCase("XML")) {
                         return null;
                     }
@@ -106,6 +109,9 @@ public class ObjectTransformer {
                 Document document = isValidXml(input);
 
                 if (document != null) {
+                    if (fromFormat == null || fromFormat.isEmpty()) {
+                        fromFormat = "XML";
+                    }
                     if (fromFormat.equalsIgnoreCase("JSON")) {
                         return null;
                     }
@@ -165,6 +171,16 @@ public class ObjectTransformer {
             for (ModbusModel modbusModel : modbusModels) {
                 XMLMapper xmlMapper = new XMLMapper(modbusModel.getPath(), modbusModel.getType(), modbusModel.getValues(), modbusModel.getPattern());
                 String value = xmlMapper.getMappedValueXML(document);
+
+                log.debug("Added value for register: {} with value: {}", modbusModel.getAddress(), value);
+
+                if (value == null || value.equals("null")) {
+                    result.put(modbusModel.getAddress(), null);
+                    continue;
+                } else if (value.startsWith("\"") && value.endsWith("\"")) {
+                    value = value.substring(1, value.length() - 1);
+                }
+
                 result.put(modbusModel.getAddress(), Long.parseLong(value));
             }
         }
@@ -186,20 +202,12 @@ public class ObjectTransformer {
                     parentNode.removeChild(mappingNode);
                 }
 
-                String value = null;
-                HashMap<Integer, Object> registersMap = isValidMap(input);
-                if (input instanceof JsonNode node) {
-                    log.debug("Input is JSON: {}", node);
+                String value = getValueFromMapper(mapper, input);
 
-                    value = mapper.getMappedValueJSON(node);
-                } else if (input instanceof Document document) {
-                    log.debug("Input is XML: {}", document);
-
-                    value = mapper.getMappedValueXML(document);
-                } else if (registersMap != null && !registersMap.isEmpty()) {
-                    log.debug("Input is Modbus: {}", registersMap);
-
-                    value = mapper.getMappedValueModbus(registersMap);
+                if (value == null || value.equals("null")) {
+                    value = "";
+                } else if (value.startsWith("\"") && value.endsWith("\"")) {
+                    value = value.substring(1, value.length() - 1);
                 }
 
                 log.debug("path: {}, value: {}", mapper.getPath(), value);
