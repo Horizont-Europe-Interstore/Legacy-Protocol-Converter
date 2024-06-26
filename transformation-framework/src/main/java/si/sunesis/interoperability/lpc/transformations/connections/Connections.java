@@ -22,7 +22,6 @@ package si.sunesis.interoperability.lpc.transformations.connections;
 
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3ClientBuilder;
-import com.hivemq.client.mqtt.mqtt3.message.connect.connack.Mqtt3ConnAck;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5ClientBuilder;
 import com.intelligt.modbus.jlibmodbus.Modbus;
@@ -213,7 +212,7 @@ public class Connections {
     }
 
     private Mqtt5Client buildMqtt5Client(ConnectionModel connection) {
-       Mqtt5ClientBuilder client = com.hivemq.client.mqtt.mqtt5.Mqtt5Client.builder()
+        Mqtt5ClientBuilder client = com.hivemq.client.mqtt.mqtt5.Mqtt5Client.builder()
                 .identifier(connection.getName())
                 .serverHost(connection.getHost())
                 .serverPort(connection.getPort())
@@ -293,6 +292,9 @@ public class Connections {
             tcpParameters.setHost(InetAddress.getByName(connectionModel.getHost()));
             tcpParameters.setPort(connectionModel.getPort());
             SerialUtils.setSerialPortFactory(new SerialPortFactoryTcpServer(tcpParameters));
+
+            openPort(connectionModel);
+
             SerialParameters serialParameters = getSerialParameters(connectionModel);
 
             return new ModbusClient(ModbusMasterFactory.createModbusMasterRTU(serialParameters));
@@ -307,10 +309,27 @@ public class Connections {
             return new ModbusClient(ModbusMasterFactory.createModbusMasterTCP(tcpParameters));
         } else {
             // Serial client
-            SerialUtils.setSerialPortFactory(new SerialPortFactoryJSerialComm());
+            openPort(connectionModel);
+
             SerialParameters serialParameters = getSerialParameters(connectionModel);
 
             return new ModbusClient(ModbusMasterFactory.createModbusMasterRTU(serialParameters));
+        }
+    }
+
+    private void openPort(ConnectionModel connectionModel) {
+        try {
+            jssc.SerialPort port = new jssc.SerialPort(connectionModel.getDevice());
+
+            log.debug("Port {} is opened: {}", port.getPortName(), port.isOpened());
+
+            if (!port.isOpened()) {
+                log.info("Opening port: {}", port.getPortName());
+                log.info("Opened: {}", port.openPort());
+            }
+        } catch (jssc.SerialPortException e) {
+            log.error("Error opening serial port", e);
+            System.exit(1);
         }
     }
 

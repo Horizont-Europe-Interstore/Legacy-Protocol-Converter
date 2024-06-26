@@ -28,6 +28,7 @@ import com.intelligt.modbus.jlibmodbus.msg.base.ModbusRequest;
 import com.intelligt.modbus.jlibmodbus.msg.base.ModbusResponse;
 import com.intelligt.modbus.jlibmodbus.msg.response.ReadCoilsResponse;
 import com.intelligt.modbus.jlibmodbus.msg.response.ReadHoldingRegistersResponse;
+import com.intelligt.modbus.jlibmodbus.utils.ModbusExceptionCode;
 import com.intelligt.modbus.jlibmodbus.utils.ModbusFunctionCode;
 import lombok.extern.slf4j.Slf4j;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.MessageModel;
@@ -48,14 +49,17 @@ public class ModbusHandler {
         throw new IllegalStateException("Utility class");
     }
 
-    protected static ModbusRequest buildModbusRequest(Map<Integer, Long> msgToRegisterMap, ModbusModel modbusModel, MessageModel messageModel) throws ModbusNumberException {
+    protected static ModbusRequest buildModbusRequest(Map<Integer, Long> msgToRegisterMap, ModbusModel modbusModel, MessageModel messageModel, int quantity) throws ModbusNumberException {
         ModbusRequest request = null;
         ModbusRequestBuilder requestBuilder = ModbusRequestBuilder.getInstance();
-        int quantity = 8;
 
         while (!Modbus.checkEndAddress(modbusModel.getAddress() + quantity)) {
             quantity--;
         }
+
+        log.debug("Reading {} registers", quantity);
+        log.debug("Starting register address: {}", modbusModel.getAddress());
+        log.debug("Function code: {}", messageModel.getFunctionCode());
 
         switch (ModbusFunctionCode.get(messageModel.getFunctionCode())) {
             case READ_COILS -> request = requestBuilder.buildReadCoils(messageModel.getDeviceId(),
@@ -103,13 +107,17 @@ public class ModbusHandler {
         return request;
     }
 
+    protected static ModbusRequest buildModbusRequest(Map<Integer, Long> msgToRegisterMap, ModbusModel modbusModel, MessageModel messageModel) throws ModbusNumberException {
+        return buildModbusRequest(msgToRegisterMap, modbusModel, messageModel, 1);
+    }
+
     protected static void handleModbusResponse(ModbusResponse response, Map<Integer, Object> registerMap, ModbusModel modbusModel, MessageModel messageModel) throws IllegalDataAddressException {
         if (response.getFunction() != messageModel.getFunctionCode()) {
             log.warn("Function code mismatch! Response: {}, message model: {}", response.getFunction(), messageModel.getFunctionCode());
             return;
         }
 
-        if (response.getModbusExceptionCode() != null) {
+        if (response.getModbusExceptionCode() != null && response.getModbusExceptionCode() != ModbusExceptionCode.NO_EXCEPTION) {
             log.warn("Modbus exception code: {}", response.getModbusExceptionCode());
         }
 

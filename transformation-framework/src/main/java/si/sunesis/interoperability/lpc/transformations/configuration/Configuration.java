@@ -88,7 +88,8 @@ public class Configuration {
                 }
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            log.error("Error reading configuration", e);
+            System.exit(1);
         }
     }
 
