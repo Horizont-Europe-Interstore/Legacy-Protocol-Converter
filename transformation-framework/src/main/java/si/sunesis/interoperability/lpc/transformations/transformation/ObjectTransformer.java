@@ -136,8 +136,8 @@ public class ObjectTransformer {
         return null;
     }
 
-    public Map<Integer, Long> transformToModbus(List<ModbusModel> modbusModels, String input, String fromFormat) throws ParseException {
-        HashMap<Integer, Long> result = new HashMap<>();
+    public Map<Integer, Float> transformToModbus(List<ModbusModel> modbusModels, String input, String fromFormat) throws ParseException {
+        HashMap<Integer, Float> result = new HashMap<>();
 
         JsonNode jsonNode = isValidJson(input);
 
@@ -157,7 +157,7 @@ public class ObjectTransformer {
                     continue;
                 }
 
-                result.put(modbusModel.getAddress(), Long.parseLong(value));
+                result.put(modbusModel.getAddress(), Float.valueOf(value));
             }
         }
 
@@ -181,7 +181,7 @@ public class ObjectTransformer {
                     value = value.substring(1, value.length() - 1);
                 }
 
-                result.put(modbusModel.getAddress(), Long.parseLong(value));
+                result.put(modbusModel.getAddress(), Float.valueOf(value));
             }
         }
 
