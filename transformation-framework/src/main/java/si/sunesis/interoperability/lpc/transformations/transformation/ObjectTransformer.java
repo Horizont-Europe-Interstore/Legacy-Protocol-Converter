@@ -136,14 +136,17 @@ public class ObjectTransformer {
         return null;
     }
 
-    public Map<Integer, Long> transformToModbus(List<ModbusModel> modbusModels, String input, String fromFormat) throws ParseException {
-        HashMap<Integer, Long> result = new HashMap<>();
+    public Map<Integer, Float> transformToModbus(List<ModbusModel> modbusModels, String input, String fromFormat) throws ParseException {
+        HashMap<Integer, Float> result = new HashMap<>();
 
         JsonNode jsonNode = isValidJson(input);
 
         if (jsonNode != null) {
+            if (fromFormat == null || fromFormat.isEmpty()) {
+                fromFormat = "JSON";
+            }
             if (fromFormat.equalsIgnoreCase("XML")) {
-                return new HashMap<>();
+                return result;
             }
 
             for (ModbusModel modbusModel : modbusModels) {
@@ -157,15 +160,20 @@ public class ObjectTransformer {
                     continue;
                 }
 
-                result.put(modbusModel.getAddress(), Long.parseLong(value));
+                result.put(modbusModel.getAddress(), Float.valueOf(value));
             }
+
+            return result;
         }
 
         Document document = isValidXml(input);
 
         if (document != null) {
+            if (fromFormat == null || fromFormat.isEmpty()) {
+                fromFormat = "XML";
+            }
             if (fromFormat.equalsIgnoreCase("JSON")) {
-                return new HashMap<>();
+                return result;
             }
 
             for (ModbusModel modbusModel : modbusModels) {
@@ -181,8 +189,10 @@ public class ObjectTransformer {
                     value = value.substring(1, value.length() - 1);
                 }
 
-                result.put(modbusModel.getAddress(), Long.parseLong(value));
+                result.put(modbusModel.getAddress(), Float.valueOf(value));
             }
+
+            return result;
         }
 
         return result;

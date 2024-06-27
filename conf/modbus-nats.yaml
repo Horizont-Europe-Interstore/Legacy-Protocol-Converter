@@ -1,0 +1,61 @@
+connections:
+  - name: MQTT-connection
+    type: MQTT
+    host: 37aad5450fca492297d7d3bc3329f4ba.s2.eu.hivemq.cloud
+    port: 8883
+    ssl:
+      default: true
+    username: lpc-user
+    password: zv.NaiixwWZ7wCC
+  - name: Modbus-connection
+    type: Modbus
+    host: localhost
+    port: 5022
+transformations:
+  - name: Modbus to JSON IEEE2030.5 Event
+    description: Example showing transformation of messages from Modbus to JSON
+    connections:
+      incoming-connection:
+        - Modbus-connection
+      outgoing-connection:
+        - MQTT-connection
+      outgoing-topic: event/myevent
+      outgoing-format: JSON
+    to-outgoing:
+      to-topic: event/myevent
+      message: '{ "creationTime": $timestamp, "eventStatus": { "currentStatus": {
+        "lpc:mapping": { "path": "32010", "type": "integer", "values":
+        ["scheduled", "active", "cancelled", "cancelled_with_r", "superseded"] }
+        }, "dateTime": null, "potentiallySuperseded": false }, "interval": {
+        "duration": { "lpc:mapping": { "path": "32002", "type": "integer" } },
+        "start": null } } '
+    interval-request:
+      interval: 3000
+      request:
+        modbus-function-code: 3
+        modbus-device-id: 1
+        modbus-registers:
+          - register-address: 32002
+            type: int16
+            endian: 1
+          - register-address: 32010
+            type: int32
+            endian: 0
+  - name: Modbus to JSON IEEE2030.5 Event
+    description: Example showing transformation of messages from Modbus to JSON
+    connections:
+      incoming-connection:
+        - Modbus-connection
+      outgoing-connection:
+        - MQTT-connection
+      outgoing-topic: event/control
+      outgoing-format: JSON
+    to-incoming:
+      modbus-function-code: 6
+      modbus-device-id: 1
+      modbus-registers:
+        - register-address: 32002
+          type: int16
+          path: /test
+version: 2.0.0
+timestamp: 2024-04-10T15:05:34.759Z

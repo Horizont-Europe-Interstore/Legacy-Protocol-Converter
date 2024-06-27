@@ -241,7 +241,7 @@ public class TransformationHandler {
     }
 
     private void sendModbusRequest(ModbusClient modbusClient,
-                                   Map<Integer, Long> msgToRegisterMap,
+                                   Map<Integer, Float> msgToRegisterMap,
                                    Map<Integer, Object> registerMap,
                                    MessageModel messageModel) {
         Map<ModbusModel, ModbusRequest> failed = new HashMap<>();
@@ -387,7 +387,7 @@ public class TransformationHandler {
                                      List<RequestHandler> outgoingConnections,
                                      MessageModel messageModel) throws ModbusNumberException, ParseException {
 
-        Map<Integer, Long> msgToRegisterMap = Collections.emptyMap();
+        Map<Integer, Float> msgToRegisterMap = Collections.emptyMap();
         if (message != null) {
             msgToRegisterMap =
                     objectTransformer.transformToModbus(transformation.getToIncoming().getModbusRegisters(),

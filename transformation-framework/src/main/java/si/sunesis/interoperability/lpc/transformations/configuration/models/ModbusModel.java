@@ -21,10 +21,9 @@
 package si.sunesis.interoperability.lpc.transformations.configuration.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.kumuluz.ee.configuration.cdi.ConfigValue;
 import lombok.Data;
 
- 
+
 @Data
 public class ModbusModel {
 

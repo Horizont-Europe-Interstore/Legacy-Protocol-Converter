@@ -35,6 +35,7 @@ import si.sunesis.interoperability.lpc.transformations.configuration.models.Mess
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ModbusModel;
 
 import javax.enterprise.context.ApplicationScoped;
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 /**
@@ -49,7 +50,7 @@ public class ModbusHandler {
         throw new IllegalStateException("Utility class");
     }
 
-    protected static ModbusRequest buildModbusRequest(Map<Integer, Long> msgToRegisterMap, ModbusModel modbusModel, MessageModel messageModel, int quantity) throws ModbusNumberException {
+    protected static ModbusRequest buildModbusRequest(Map<Integer, Float> msgToRegisterMap, ModbusModel modbusModel, MessageModel messageModel, int quantity) throws ModbusNumberException {
         ModbusRequest request = null;
         ModbusRequestBuilder requestBuilder = ModbusRequestBuilder.getInstance();
 
@@ -57,9 +58,10 @@ public class ModbusHandler {
             quantity--;
         }
 
-        log.debug("Reading {} registers", quantity);
+        log.debug("Quantity: {}", quantity);
+        log.debug("Reading/writing from/to {} registers", quantity);
         log.debug("Starting register address: {}", modbusModel.getAddress());
-        log.debug("Function code: {}", messageModel.getFunctionCode());
+        log.debug("Function code: {} value: {}", ModbusFunctionCode.get(messageModel.getFunctionCode()).name(), ModbusFunctionCode.get(messageModel.getFunctionCode()));
 
         switch (ModbusFunctionCode.get(messageModel.getFunctionCode())) {
             case READ_COILS -> request = requestBuilder.buildReadCoils(messageModel.getDeviceId(),
@@ -83,7 +85,7 @@ public class ModbusHandler {
             }
             case WRITE_SINGLE_REGISTER -> request = requestBuilder.buildWriteSingleRegister(messageModel.getDeviceId(),
                     modbusModel.getAddress(),
-                    Math.toIntExact(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0L)));
+                    Float.floatToIntBits(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0f)));
             case READ_EXCEPTION_STATUS -> request = requestBuilder.buildReadExceptionStatus(messageModel.getDeviceId());
             case WRITE_MULTIPLE_COILS -> {
                 boolean value = msgToRegisterMap.containsKey(modbusModel.getAddress()) && msgToRegisterMap.get(modbusModel.getAddress()) == 1;
@@ -91,24 +93,40 @@ public class ModbusHandler {
                         modbusModel.getAddress(),
                         new boolean[]{value});
             }
-            case WRITE_MULTIPLE_REGISTERS ->
-                    request = requestBuilder.buildWriteMultipleRegisters(messageModel.getDeviceId(),
-                            modbusModel.getAddress(),
-                            new int[]{Math.toIntExact(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0L))});
-            case READ_WRITE_MULTIPLE_REGISTERS ->
-                    request = requestBuilder.buildReadWriteMultipleRegisters(messageModel.getDeviceId(),
-                            modbusModel.getAddress(),
-                            quantity,
-                            modbusModel.getAddress(),
-                            new int[]{Math.toIntExact(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0L))});
+            case WRITE_MULTIPLE_REGISTERS -> {
+                int capacity = getNumOfRegisters(modbusModel.getType());
+                byte[] bytes = ByteBuffer.allocate(capacity).putFloat(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0f)).array();
+
+                request = requestBuilder.buildWriteMultipleRegisters(messageModel.getDeviceId(),
+                        modbusModel.getAddress(),
+                        bytes);
+            }
+            case READ_WRITE_MULTIPLE_REGISTERS -> {
+                int capacity = getNumOfRegisters(modbusModel.getType());
+                byte[] bytes = ByteBuffer.allocate(capacity).putFloat(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0f)).array();
+
+                int[] intArray = new int[bytes.length / 2];
+
+                for (int i = 0; i < bytes.length; i += 2) {
+                    // Combine two bytes to form one int
+                    intArray[i / 2] = ((bytes[i] & 0xFF) << 8) | (bytes[i + 1] & 0xFF);
+                }
+
+                request = requestBuilder.buildReadWriteMultipleRegisters(messageModel.getDeviceId(),
+                        modbusModel.getAddress(),
+                        quantity,
+                        modbusModel.getAddress(),
+                        intArray);
+            }
             default -> log.warn("Function code not supported: {}", messageModel.getFunctionCode());
         }
 
         return request;
     }
 
-    protected static ModbusRequest buildModbusRequest(Map<Integer, Long> msgToRegisterMap, ModbusModel modbusModel, MessageModel messageModel) throws ModbusNumberException {
-        return buildModbusRequest(msgToRegisterMap, modbusModel, messageModel, 1);
+    protected static ModbusRequest buildModbusRequest(Map<Integer, Float> msgToRegisterMap, ModbusModel modbusModel, MessageModel messageModel) throws ModbusNumberException {
+        int quantity = (int) Math.ceil(getNumOfRegisters(modbusModel.getType()) / 2.0);
+        return buildModbusRequest(msgToRegisterMap, modbusModel, messageModel, quantity);
     }
 
     protected static void handleModbusResponse(ModbusResponse response, Map<Integer, Object> registerMap, ModbusModel modbusModel, MessageModel messageModel) throws IllegalDataAddressException {
@@ -135,14 +153,11 @@ public class ModbusHandler {
 
                 getValueFromRegisters(holdingRegistersResponse, registerMap, modbusModel);
             }
-            default -> log.warn("Function code not supported: {}", messageModel.getFunctionCode());
+            default -> log.debug("Function code is write only: {}", messageModel.getFunctionCode());
         }
     }
 
     protected static void getValueFromRegisters(ReadHoldingRegistersResponse response, Map<Integer, Object> registerMap, ModbusModel modbusModel) throws IllegalDataAddressException {
-        //response.getHoldingRegisters().setBytesLe(response.getHoldingRegisters().getBytes());
-        //response.getHoldingRegisters().setBytesBe(response.getHoldingRegisters().getBytes());
-
         if (modbusModel.getType().contains("int")) {
             if (modbusModel.getType().contains("8")) {
                 registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getInt8At(0));
@@ -163,6 +178,32 @@ public class ModbusHandler {
             }
         } else if (modbusModel.getType().contains("double")) {
             registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getFloat64At(0));
+        } else {
+            throw new IllegalArgumentException("Wrong type");
+        }
+    }
+
+    private static int getNumOfRegisters(String type) {
+        if (type.contains("int")) {
+            if (type.contains("8")) {
+                return 1;
+            } else if (type.contains("16")) {
+                return 2;
+            } else if (type.contains("64")) {
+                return 8;
+            } else {
+                return 4;
+            }
+        } else if (type.contains("long")) {
+            return 8;
+        } else if (type.contains("float")) {
+            if (type.contains("64")) {
+                return 8;
+            } else {
+                return 4;
+            }
+        } else if (type.contains("double")) {
+            return 8;
         } else {
             throw new IllegalArgumentException("Wrong type");
         }

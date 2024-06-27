@@ -19,13 +19,12 @@ transformations:
       incoming-connection:
         - MQTT-connection2
       incoming-topic: topic1
-      incoming-format: XML
       outgoing-connection:
         - NATS-connection
       outgoing-topic: event/myevent
       outgoing-format: JSON
     to-outgoing:
-      to-topic: event/myevent
+      to-topic: event/myevent1
       message: '{
         "creationTime": $timestamp,
         "eventStatus": {
