@@ -58,6 +58,7 @@ public class ModbusHandler {
             quantity--;
         }
 
+        log.debug("Quantity: {}", quantity);
         log.debug("Reading/writing from/to {} registers", quantity);
         log.debug("Starting register address: {}", modbusModel.getAddress());
         log.debug("Function code: {} value: {}", ModbusFunctionCode.get(messageModel.getFunctionCode()).name(), ModbusFunctionCode.get(messageModel.getFunctionCode()));
@@ -124,7 +125,8 @@ public class ModbusHandler {
     }
 
     protected static ModbusRequest buildModbusRequest(Map<Integer, Float> msgToRegisterMap, ModbusModel modbusModel, MessageModel messageModel) throws ModbusNumberException {
-        return buildModbusRequest(msgToRegisterMap, modbusModel, messageModel, 1);
+        int quantity = (int) Math.ceil(getNumOfRegisters(modbusModel.getType()) / 2.0);
+        return buildModbusRequest(msgToRegisterMap, modbusModel, messageModel, quantity);
     }
 
     protected static void handleModbusResponse(ModbusResponse response, Map<Integer, Object> registerMap, ModbusModel modbusModel, MessageModel messageModel) throws IllegalDataAddressException {

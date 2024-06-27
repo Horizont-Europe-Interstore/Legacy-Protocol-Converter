@@ -142,8 +142,11 @@ public class ObjectTransformer {
         JsonNode jsonNode = isValidJson(input);
 
         if (jsonNode != null) {
+            if (fromFormat == null || fromFormat.isEmpty()) {
+                fromFormat = "JSON";
+            }
             if (fromFormat.equalsIgnoreCase("XML")) {
-                return new HashMap<>();
+                return result;
             }
 
             for (ModbusModel modbusModel : modbusModels) {
@@ -159,13 +162,18 @@ public class ObjectTransformer {
 
                 result.put(modbusModel.getAddress(), Float.valueOf(value));
             }
+
+            return result;
         }
 
         Document document = isValidXml(input);
 
         if (document != null) {
+            if (fromFormat == null || fromFormat.isEmpty()) {
+                fromFormat = "XML";
+            }
             if (fromFormat.equalsIgnoreCase("JSON")) {
-                return new HashMap<>();
+                return result;
             }
 
             for (ModbusModel modbusModel : modbusModels) {
@@ -183,6 +191,8 @@ public class ObjectTransformer {
 
                 result.put(modbusModel.getAddress(), Float.valueOf(value));
             }
+
+            return result;
         }
 
         return result;
