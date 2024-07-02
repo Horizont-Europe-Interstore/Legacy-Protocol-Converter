@@ -87,6 +87,14 @@ public class ObjectTransformer {
         mappingDefinition = mappingDefinition.replace("\"$timestamp\"", String.valueOf(millisecond));
         mappingDefinition = mappingDefinition.replace("$timestamp", String.valueOf(millisecond));
 
+        if(toFormat == null){
+            if (isValidJson(mappingDefinition) != null) {
+                toFormat = "JSON";
+            } else if (isValidXml(mappingDefinition) != null) {
+                toFormat = "XML";
+            }
+        }
+
         try {
             if (objectInput instanceof String input) {
                 JsonNode jsonNode = isValidJson(input);
