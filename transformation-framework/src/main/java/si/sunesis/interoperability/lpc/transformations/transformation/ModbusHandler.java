@@ -28,6 +28,7 @@ import com.intelligt.modbus.jlibmodbus.msg.base.ModbusRequest;
 import com.intelligt.modbus.jlibmodbus.msg.base.ModbusResponse;
 import com.intelligt.modbus.jlibmodbus.msg.response.ReadCoilsResponse;
 import com.intelligt.modbus.jlibmodbus.msg.response.ReadHoldingRegistersResponse;
+import com.intelligt.modbus.jlibmodbus.utils.DataUtils;
 import com.intelligt.modbus.jlibmodbus.utils.ModbusExceptionCode;
 import com.intelligt.modbus.jlibmodbus.utils.ModbusFunctionCode;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,7 @@ import si.sunesis.interoperability.lpc.transformations.configuration.models.Modb
 
 import javax.enterprise.context.ApplicationScoped;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Map;
 
 /**
@@ -151,36 +153,93 @@ public class ModbusHandler {
             case READ_WRITE_MULTIPLE_REGISTERS, READ_INPUT_REGISTERS, READ_HOLDING_REGISTERS -> {
                 ReadHoldingRegistersResponse holdingRegistersResponse = (ReadHoldingRegistersResponse) response;
 
-                getValueFromRegisters(holdingRegistersResponse, registerMap, modbusModel);
+                getValueFromRegisters(holdingRegistersResponse, registerMap, modbusModel, messageModel);
             }
             default -> log.debug("Function code is write only: {}", messageModel.getFunctionCode());
         }
     }
 
-    protected static void getValueFromRegisters(ReadHoldingRegistersResponse response, Map<Integer, Object> registerMap, ModbusModel modbusModel) throws IllegalDataAddressException {
+    protected static void getValueFromRegisters(ReadHoldingRegistersResponse response,
+                                                Map<Integer, Object> registerMap,
+                                                ModbusModel modbusModel,
+                                                MessageModel messageModel) {
+        int[] registers = response.getHoldingRegisters().getRegisters();
+
+        if (messageModel.getEndianness() == ByteOrder.BIG_ENDIAN) {
+            byte[] bytes = convertToLittleEndian(response.getHoldingRegisters().getBytes());
+            registers = DataUtils.BeToRegArray(bytes);
+        }
+
         if (modbusModel.getType().contains("int")) {
             if (modbusModel.getType().contains("8")) {
-                registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getInt8At(0));
+                registerMap.put(modbusModel.getAddress(), DataUtils.byteLow(get(0, registers)));
             } else if (modbusModel.getType().contains("16")) {
-                registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getInt16At(0));
+                registerMap.put(modbusModel.getAddress(), getInt16At(0, registers));
             } else if (modbusModel.getType().contains("64")) {
-                registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getInt64At(0));
+                registerMap.put(modbusModel.getAddress(), getInt64At(0, registers));
             } else {
-                registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getInt32At(0));
+                registerMap.put(modbusModel.getAddress(), getInt32At(0, registers));
             }
         } else if (modbusModel.getType().contains("long")) {
-            registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getInt64At(0));
+            registerMap.put(modbusModel.getAddress(), getInt64At(0, registers));
         } else if (modbusModel.getType().contains("float")) {
             if (modbusModel.getType().contains("64")) {
-                registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getFloat64At(0));
+                registerMap.put(modbusModel.getAddress(), getFloat64At(0, registers));
             } else {
-                registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getFloat32At(0));
+                registerMap.put(modbusModel.getAddress(), getFloat32At(0, registers));
             }
         } else if (modbusModel.getType().contains("double")) {
-            registerMap.put(modbusModel.getAddress(), response.getHoldingRegisters().getFloat64At(0));
+            registerMap.put(modbusModel.getAddress(), getFloat64At(0, registers));
         } else {
             throw new IllegalArgumentException("Wrong type");
         }
+    }
+
+    public static Integer get(int offset, int[] registers) {
+        return registers[offset];
+    }
+
+    public static int getInt16At(int offset, int[] registers) {
+        return get(offset, registers);
+    }
+
+    public static int getInt32At(int offset, int[] registers) {
+        return getInt16At(offset, registers) & '\uffff' | (getInt16At(offset + 1, registers) & '\uffff') << 16;
+    }
+
+    public static long getInt64At(int offset, int[] registers) {
+        return getInt32At(offset, registers) & 4294967295L | (getInt32At(offset + 2, registers) & 4294967295L) << 32;
+    }
+
+    public static float getFloat32At(int offset, int[] registers) {
+        return Float.intBitsToFloat(getInt32At(offset, registers));
+    }
+
+    public static double getFloat64At(int offset, int[] registers) {
+        return Double.longBitsToDouble(getInt64At(offset, registers));
+    }
+
+    private static byte[] convertToLittleEndian(byte[] bytes) {
+        if (bytes.length == 1) {
+            return bytes;
+        }
+
+        ByteBuffer bufferBE = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN);
+
+        int value;
+        // Step 3: Read the value as an integer
+        if (bytes.length == 2) {
+            value = bufferBE.getShort();
+        } else {
+            value = bufferBE.getInt();
+        }
+
+        // Step 4: Create a new ByteBuffer, set to LITTLE_ENDIAN, and put the value
+        ByteBuffer bufferLE = ByteBuffer.allocate(Integer.SIZE / Byte.SIZE);
+        bufferLE.order(ByteOrder.LITTLE_ENDIAN).putInt(value);
+
+        // Step 5: Extract the little-endian ordered bytes
+        return bufferLE.array();
     }
 
     private static int getNumOfRegisters(String type) {

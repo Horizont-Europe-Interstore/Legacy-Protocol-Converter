@@ -21,8 +21,10 @@
 package si.sunesis.interoperability.lpc.transformations.configuration.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.Data;
 
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +51,21 @@ public class MessageModel {
 
     @JsonProperty("modbus-registers")
     private List<ModbusModel> modbusRegisters = new ArrayList<>();
+
+    private ByteOrder endianness = ByteOrder.LITTLE_ENDIAN;
+
+    @JsonSetter
+    public void setEndianness(String endianness) {
+        if (endianness == null) {
+            return;
+        }
+
+        if (endianness.toLowerCase().contains("big")) {
+            this.endianness = ByteOrder.BIG_ENDIAN;
+        } else {
+            this.endianness = ByteOrder.LITTLE_ENDIAN;
+        }
+    }
 
     @JsonProperty("retry-count")
     private Integer retryCount = 0;
