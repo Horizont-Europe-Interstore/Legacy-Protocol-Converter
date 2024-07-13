@@ -260,6 +260,7 @@ transformations:
       retry-count: integer
       modbus-function-code: integer
       modbus-device-id: integer
+      endianness: big/little
       modbus-registers:
         - register-address: integer
           path: string
@@ -271,6 +272,7 @@ transformations:
       request:
         modbus-function-code: integer
         modbus-device-id: integer
+        endianness: big/little
         modbus-registers:
           - register-address: integer
             path: string
