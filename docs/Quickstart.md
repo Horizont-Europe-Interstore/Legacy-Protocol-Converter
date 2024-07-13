@@ -401,6 +401,7 @@ transformations:
       request:
         modbus-function-code: 3
         modbus-device-id: 1
+        endianness: little
         modbus-registers:
           - register-address: 31000
             type: int64

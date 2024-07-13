@@ -119,7 +119,7 @@ public class Configuration {
         return dir.listFiles();
     }
 
-    private String getConfFolderName() {
+    public static String getConfFolderName() {
         String configuration = System.getenv(Constants.CONFIGURATION_FOLDER);
 
         if (configuration == null) {

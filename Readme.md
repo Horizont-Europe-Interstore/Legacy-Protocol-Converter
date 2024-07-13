@@ -313,6 +313,7 @@ Messages options:
     - **message:** Message with mappings that will be sent to the specified topic.
     - **modbus-function-code:** Function code for reading/writing data from/to Modbus device.
     - **modbus-device-id:** Client id of the Modbus device.
+    - **endianness:** Endianness of the data, big or little. Default value is little.
     - **modbus-registers:** List of definitions of modbus registers used for writing/reading the data.
 
 Interval request options:
@@ -325,6 +326,7 @@ Interval request options:
     - **message:** Message with mappings that will be sent to the specified topic.
     - **modbus-function-code:** Function code for reading/writing data from/to Modbus device.
     - **modbus-device-id:** Client id of the Modbus device.
+    - **endianness:** Endianness of the data, big or little. Default value is little.
     - **modbus-registers:** List of definitions of modbus registers used for writing/reading the data.
 
 **retry-count** is used for all message structures and it specifies the number of retries for sending the message. If
@@ -675,6 +677,7 @@ transformations:
       request:
         modbus-function-code: 3
         modbus-device-id: 1
+        endianness: little
         modbus-registers:
           - register-address: 31000
             type: int64

@@ -6,6 +6,6 @@ public class Constants {
         throw new IllegalStateException("Utility class");
     }
 
-    public static final String API_KEY_HEADER = "API-KEY";
+    public static final String API_KEY_HEADER = "API_KEY";
     public static final String CONFIGURATION_FOLDER = "CONFIGURATION";
 }

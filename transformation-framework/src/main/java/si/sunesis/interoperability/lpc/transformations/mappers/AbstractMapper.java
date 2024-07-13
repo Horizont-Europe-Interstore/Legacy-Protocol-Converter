@@ -211,6 +211,14 @@ public abstract class AbstractMapper {
 
         if (getType().toLowerCase().contains("str")) {
             return "\"" + cleanedValue + "\"";
+        } else if (isNumber(cleanedValue)) {
+            double d = Double.parseDouble(cleanedValue);
+
+            if (getType().toLowerCase().contains("int")) {
+                return String.valueOf((int) d);
+            } else if (getType().toLowerCase().contains("float") || getType().toLowerCase().contains("double")) {
+                return String.valueOf(d);
+            }
         }
 
         return cleanedValue;
@@ -218,9 +226,9 @@ public abstract class AbstractMapper {
 
     public static boolean isNumber(String input) {
         try {
-            Long.parseLong(input);
+            Double.parseDouble(input);
             return true;
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
             return false;
         }
     }
