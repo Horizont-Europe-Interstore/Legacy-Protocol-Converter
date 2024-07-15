@@ -35,13 +35,12 @@ transformations:
       request:
         modbus-function-code: 3
         modbus-device-id: 1
+        endianness: little
         modbus-registers:
           - register-address: 32002
             type: int16
-            endian: 1
           - register-address: 32010
             type: int32
-            endian: 0
   - name: Modbus to JSON IEEE2030.5 Event
     description: Example showing transformation of messages from Modbus to JSON
     connections:
@@ -54,6 +53,7 @@ transformations:
     to-incoming:
       modbus-function-code: 6
       modbus-device-id: 1
+      endianness: little
       modbus-registers:
         - register-address: 32002
           type: int16

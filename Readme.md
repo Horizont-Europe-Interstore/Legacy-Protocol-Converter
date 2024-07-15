@@ -1,6 +1,6 @@
-# Legacy Systems Protocol Converter (LPC)
+# Legacy Systems Protocol Converter for IEEE2030.5
 
-The Legacy Systems Protocol Converter, initially developed within the Horizon Europe Interstore project, acts as a
+The Legacy Systems Protocol Converter (LPC), initially developed within the Horizon Europe Interstore project, acts as a
 middleware, allowing devices that use different communication protocols to exchange data with EMS systems that use the
 IEEE2030.5 standard. It supports:
 
@@ -753,6 +753,15 @@ Separate log file for Legacy Protocol Converter is created in order for easier t
 
 If using different configuration, one should specify the location of the configuration.
 
+Logs are stored in the folder `logs` in the root of the project. If you are using Docker, logs are stored in the
+container. You can also mount the `logs` folder to the container to store `logs` on the host machine such as:
+    
+```bash
+docker run -v /path/to/logs:/app/logs -v /path/to/config:/app/conf lpc:latest
+```
+
+This will mount the logs folder `/path/to/logs` to the container and `logs` will be available on the host machine.
+
 ### Building and running the LPC using JAR
 
 Build the JAR:
@@ -768,14 +777,14 @@ set: `KUMULUZEE_LOGS_CONFIGFILELOCATION=path/to/file/log4j2.xml`
 Deploy the application:
 
 ```bash
-java -jar transformation-framework/target/transformation-framework-1.0-SNAPSHOT.jar
+java -jar transformation-framework/target/legacy-protocol-converter.jar
 ```
 
 This will take the configuration files from ```./conf``` folder. If you want to specify a different folder, you can do
 so by providing the path as an argument:
 
 ```bash
-java -DCONFIGURATION=/path/to/config -jar transformation-framework/target/transformation-framework-1.0-SNAPSHOT.jar
+java -DCONFIGURATION=/path/to/config -jar transformation-framework/target/legacy-protocol-converter.jar
 ```
 
 This will take the configuration files from ```/path/to/config``` folder.
@@ -815,19 +824,19 @@ Pre-built Docker images are available here: https://hub.docker.com/r/interstore/
 JRE 17 is required to run the JAR file.
 
 JAR file is located in the official GitHub repository of LPC
-here: https://github.com/Horizont-Europe-Interstore/Legacy-Protocol-Converter/blob/master/lpc-1.0.jar
+here: https://github.com/Horizont-Europe-Interstore/Legacy-Protocol-Converter/blob/master/legacy-protocol-converter.jar
 
 You can download the JAR file and then run the following command to start the LPC:
 
 ```bash
-java -jar lpc-1.0.jar
+java -jar legacy-protocol-converter.jar
 ```
 
 This will take the configuration files from ```./conf``` folder. If you want to specify a different folder, you can do
 so by providing the path as an argument:
 
 ```bash
-java -DCONFIGURATION=/path/to/config -jar lpc-1.0.jar
+java -DCONFIGURATION=/path/to/config -jar legacy-protocol-converter.jar
 ```
 
 This will take the configuration files from ```/path/to/config``` folder.
@@ -859,3 +868,7 @@ docker run -d --name nats-main -p 4222:4222 -p 6222:6222 -p 8222:8222 nats:lates
 ```
 
 Then in order for the LPC to connect to the NATS server, you must configure the two containers to use the same network.
+
+## License
+
+MIT
