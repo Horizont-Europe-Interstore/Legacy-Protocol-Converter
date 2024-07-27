@@ -36,6 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 import si.sunesis.interoperability.common.interfaces.RequestHandler;
 import si.sunesis.interoperability.lpc.transformations.configuration.Configuration;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ConnectionModel;
+import si.sunesis.interoperability.lpc.transformations.exceptions.LPCException;
 import si.sunesis.interoperability.modbus.ModbusClient;
 import si.sunesis.interoperability.mqtt.Mqtt3Client;
 import si.sunesis.interoperability.mqtt.Mqtt5Client;
@@ -48,10 +49,10 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.security.KeyStore;
+import java.security.cert.CertificateFactory;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -70,12 +71,12 @@ public class Connections {
     @Getter
     private final Map<String, RequestHandler> connectionsMap = new HashMap<>();
 
-    public Connections(Configuration configuration) {
+    public Connections(Configuration configuration) throws LPCException {
         this.configuration = configuration;
         init();
     }
 
-    public void init() {
+    public void init() throws LPCException {
         connectionsMap.clear();
 
         List<ConnectionModel> yamlConnections = configuration.getConfigurations().stream()
@@ -102,7 +103,7 @@ public class Connections {
                     this.connectionsMap.put(connection.getName(), natsRequestHandler);
                     clientMap.put(connection, natsRequestHandler);
                 } catch (InterruptedException | IOException e) {
-                    log.error("Error building NATS client", e);
+                    throw new LPCException("Error building NATS client", e);
                 }
             } else if (connection.getType().equalsIgnoreCase("MQTT")) {
                 if (connection.getVersion() == 3) {
@@ -116,7 +117,7 @@ public class Connections {
                 }
             } else if (connection.getType().equalsIgnoreCase("modbus")) {
                 if (connection.getHost() == null && connection.getDevice() == null) {
-                    throw new IllegalArgumentException("Host or device is required for modbus connection");
+                    throw new LPCException("Host or device is required for Modbus connection!");
                 }
 
                 try {
@@ -125,7 +126,7 @@ public class Connections {
                     this.connectionsMap.put(connection.getName(), client);
                     clientMap.put(connection, client);
                 } catch (UnknownHostException | SerialPortException e) {
-                    log.error("Error building Modbus client", e);
+                    throw new LPCException("Error building Modbus client", e);
                 }
             } else if (connection.getType().equalsIgnoreCase("RabbitMQ")) {
                 RabbitMQClient client;
@@ -134,7 +135,7 @@ public class Connections {
                     this.connectionsMap.put(connection.getName(), client);
                     clientMap.put(connection, client);
                 } catch (IOException | TimeoutException e) {
-                    log.error("Error building RabbitMQ client", e);
+                    throw new LPCException("Error building RabbitMQ client", e);
                 }
             }
         }
@@ -172,7 +173,7 @@ public class Connections {
         return client;
     }
 
-    private Mqtt3Client buildMqtt3Client(ConnectionModel connection) {
+    private Mqtt3Client buildMqtt3Client(ConnectionModel connection) throws LPCException {
         Mqtt3ClientBuilder client = com.hivemq.client.mqtt.mqtt3.Mqtt3Client.builder()
                 .identifier(connection.getName())
                 .serverHost(connection.getHost())
@@ -192,13 +193,10 @@ public class Connections {
         }
 
         if (connection.getSsl() != null) {
-            if (connection.getSsl().getTrustStore() != null && connection.getSsl().getKeyStore() != null) {
-                client = client.sslConfig()
-                        .trustManagerFactory(buildTrustManagerFactory(connection))
-                        .applySslConfig();
-
+            if (connection.getSsl().getClientCertPath() != null && connection.getSsl().getCaCertPath() != null) {
                 client = client.sslConfig()
                         .keyManagerFactory(buildKeyManagerFactory(connection))
+                        .trustManagerFactory(buildTrustManagerFactory(connection))
                         .applySslConfig();
             } else if (Boolean.TRUE.equals(connection.getSsl().getUseDefault())) {
                 client = client.sslWithDefaultConfig();
@@ -211,7 +209,7 @@ public class Connections {
         return new Mqtt3Client(client1.toAsync());
     }
 
-    private Mqtt5Client buildMqtt5Client(ConnectionModel connection) {
+    private Mqtt5Client buildMqtt5Client(ConnectionModel connection) throws LPCException {
         Mqtt5ClientBuilder client = com.hivemq.client.mqtt.mqtt5.Mqtt5Client.builder()
                 .identifier(connection.getName())
                 .serverHost(connection.getHost())
@@ -231,13 +229,10 @@ public class Connections {
         }
 
         if (connection.getSsl() != null) {
-            if (connection.getSsl().getTrustStore() != null && connection.getSsl().getKeyStore() != null) {
-                client = client.sslConfig()
-                        .trustManagerFactory(buildTrustManagerFactory(connection))
-                        .applySslConfig();
-
+            if (connection.getSsl().getClientCertPath() != null && connection.getSsl().getCaCertPath() != null) {
                 client = client.sslConfig()
                         .keyManagerFactory(buildKeyManagerFactory(connection))
+                        .trustManagerFactory(buildTrustManagerFactory(connection))
                         .applySslConfig();
             } else if (Boolean.TRUE.equals(connection.getSsl().getUseDefault())) {
                 client = client.sslWithDefaultConfig();
@@ -286,7 +281,7 @@ public class Connections {
         return factory.newConnection();
     }
 
-    private ModbusClient buildModbusClient(ConnectionModel connectionModel) throws SerialPortException, UnknownHostException {
+    private ModbusClient buildModbusClient(ConnectionModel connectionModel) throws SerialPortException, UnknownHostException, LPCException {
         if (connectionModel.getHost() != null && connectionModel.getDevice() != null) {
             TcpParameters tcpParameters = new TcpParameters();
             tcpParameters.setHost(InetAddress.getByName(connectionModel.getHost()));
@@ -317,7 +312,7 @@ public class Connections {
         }
     }
 
-    private void openPort(ConnectionModel connectionModel) {
+    private void openPort(ConnectionModel connectionModel) throws LPCException {
         try {
             jssc.SerialPort port = new jssc.SerialPort(connectionModel.getDevice());
 
@@ -328,8 +323,7 @@ public class Connections {
                 log.info("Opened: {}", port.openPort());
             }
         } catch (jssc.SerialPortException e) {
-            log.error("Error opening serial port", e);
-            System.exit(1);
+            throw new LPCException("Error opening serial port", e);
         }
     }
 
@@ -375,36 +369,35 @@ public class Connections {
         return serialParameters;
     }
 
-    private KeyManagerFactory buildKeyManagerFactory(ConnectionModel connection) {
+    private KeyManagerFactory buildKeyManagerFactory(ConnectionModel connection) throws LPCException {
         try {
-            KeyStore keyStore = KeyStore.getInstance(connection.getSsl().getKeyStore().getType());
-            InputStream inKey = new FileInputStream(connection.getSsl().getKeyStore().getPath());
-            keyStore.load(inKey, connection.getSsl().getKeyStore().getStorePassword().toCharArray());
+            KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            FileInputStream inKey = new FileInputStream(connection.getSsl().getClientCertPath());
+            keyStore.load(inKey, connection.getSsl().getClientCertPassword().toCharArray());
 
             KeyManagerFactory kmf = KeyManagerFactory
                     .getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            kmf.init(keyStore, connection.getSsl().getKeyStore().getKeyPassword().toCharArray());
+            kmf.init(keyStore, connection.getSsl().getClientCertPassword().toCharArray());
             return kmf;
         } catch (Exception e) {
-            log.error("Error building KeyManagerFactory", e);
+            throw new LPCException("Error building KeyManagerFactory", e);
         }
-
-        return null;
     }
 
-    private TrustManagerFactory buildTrustManagerFactory(ConnectionModel connection) {
+    private TrustManagerFactory buildTrustManagerFactory(ConnectionModel connection) throws LPCException {
         try {
-            KeyStore trustStore = KeyStore.getInstance(connection.getSsl().getTrustStore().getType());
-            InputStream in = new FileInputStream(connection.getSsl().getTrustStore().getPath());
-            trustStore.load(in, connection.getSsl().getTrustStore().getStorePassword().toCharArray());
+            KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            FileInputStream in = new FileInputStream(connection.getSsl().getCaCertPath());
+            CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
+            java.security.cert.Certificate caCert = certFactory.generateCertificate(in);
+            trustStore.setCertificateEntry("caCert", caCert);
 
             TrustManagerFactory tmf = TrustManagerFactory
                     .getInstance(TrustManagerFactory.getDefaultAlgorithm());
             tmf.init(trustStore);
             return tmf;
         } catch (Exception e) {
-            log.error("Error building TrustManagerFactory", e);
+            throw new LPCException("Error building TrustManagerFactory", e);
         }
-        return null;
     }
 }

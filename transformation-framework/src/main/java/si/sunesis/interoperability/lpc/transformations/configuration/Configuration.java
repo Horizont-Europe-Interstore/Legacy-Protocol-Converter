@@ -192,6 +192,7 @@ public class Configuration {
                 }
             } catch (Exception e) {
                 log.error("Error reading configuration", e);
+                System.exit(1);
             }
         }, 60, 30, TimeUnit.SECONDS);
     }
