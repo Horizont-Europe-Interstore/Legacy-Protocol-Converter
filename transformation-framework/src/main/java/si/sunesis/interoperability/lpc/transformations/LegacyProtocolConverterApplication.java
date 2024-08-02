@@ -20,8 +20,10 @@
  */
 package si.sunesis.interoperability.lpc.transformations;
 
+import lombok.extern.slf4j.Slf4j;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
+import si.sunesis.interoperability.lpc.transformations.exceptions.LPCException;
 import si.sunesis.interoperability.lpc.transformations.transformation.TransformationsHandler;
 
 import javax.annotation.PostConstruct;
@@ -34,6 +36,7 @@ import java.util.Map;
  * @author David Trafela, Sunesis
  * @since 1.0.1
  */
+@Slf4j
 @ApplicationPath("/")
 public class LegacyProtocolConverterApplication extends ResourceConfig {
 
@@ -50,6 +53,11 @@ public class LegacyProtocolConverterApplication extends ResourceConfig {
 
     @PostConstruct
     public void init() {
-        this.handler.startHandling();
+        try {
+            this.handler.startHandling();
+        } catch (LPCException e) {
+            log.error("Failed to start handling transformations", e);
+            System.exit(1);
+        }
     }
 }

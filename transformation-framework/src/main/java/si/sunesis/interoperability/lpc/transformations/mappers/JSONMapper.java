@@ -44,7 +44,7 @@ public class JSONMapper extends AbstractMapper {
             setPath("/" + getPath());
         }
 
-        setPath(getPath().replace(".", "/"));
+        //setPath(getPath().replace(".", "/"));
 
         setType(root.get("type").asText());
         if (root.has("pattern")) {

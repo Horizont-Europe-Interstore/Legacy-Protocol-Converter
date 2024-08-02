@@ -30,11 +30,14 @@ import lombok.Data;
 @Data
 public class SslModel {
 
-    @JsonProperty("trust-store")
-    private SslStoreModel trustStore;
+    @JsonProperty("ca-cert-path")
+    private String caCertPath;
 
-    @JsonProperty("key-store")
-    private SslStoreModel keyStore;
+    @JsonProperty("client-cert-path")
+    private String clientCertPath;
+
+    @JsonProperty("client-cert-password")
+    private String clientCertPassword;
 
     @JsonProperty("default")
     private Boolean useDefault = false;

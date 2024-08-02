@@ -22,7 +22,6 @@ package si.sunesis.interoperability.lpc.transformations;
 
 import lombok.extern.slf4j.Slf4j;
 import org.glassfish.jersey.media.multipart.FormDataParam;
-import si.sunesis.interoperability.lpc.transformations.configuration.Configuration;
 import si.sunesis.interoperability.lpc.transformations.constants.Constants;
 
 import javax.enterprise.context.RequestScoped;
@@ -47,13 +46,25 @@ public class LegacyProtocolConverterResource extends Application {
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     public Response uploadFile(@FormDataParam("file") InputStream file, @Context HttpServletRequest req) {
-        Response apiKeyResponse = checkApiKey(req);
-
-        if (apiKeyResponse != null) {
-            return apiKeyResponse;
+        /*
+        String API_KEY = System.getenv(Constants.API_KEY_HEADER);
+        if (API_KEY == null && System.getProperty(Constants.API_KEY_HEADER) != null) {
+            API_KEY = System.getProperty(Constants.API_KEY_HEADER);
         }
 
-        String configuration = Configuration.getConfFolderName();
+        if (API_KEY == null || !API_KEY.equals(req.getHeader(Constants.API_KEY_HEADER))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }*/
+
+        String configuration = System.getenv(Constants.CONFIGURATION_FOLDER);
+
+        if (configuration == null) {
+            if (System.getProperty(Constants.CONFIGURATION_FOLDER) != null) {
+                configuration = System.getProperty(Constants.CONFIGURATION_FOLDER);
+            } else {
+                configuration = "conf";
+            }
+        }
 
         File dir = new File(configuration);
 
@@ -87,13 +98,25 @@ public class LegacyProtocolConverterResource extends Application {
     @GET
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     public Response downloadFile(@Context HttpServletRequest req) {
-        Response apiKeyResponse = checkApiKey(req);
-
-        if (apiKeyResponse != null) {
-            return apiKeyResponse;
+        /*
+        String API_KEY = System.getenv(Constants.API_KEY_HEADER);
+        if (API_KEY == null && System.getProperty(Constants.API_KEY_HEADER) != null) {
+            API_KEY = System.getProperty(Constants.API_KEY_HEADER);
         }
 
-        String configuration = Configuration.getConfFolderName();
+        if (API_KEY == null || !API_KEY.equals(req.getHeader(Constants.API_KEY_HEADER))) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }*/
+
+        String configuration = System.getenv(Constants.CONFIGURATION_FOLDER);
+
+        if (configuration == null) {
+            if (System.getProperty(Constants.CONFIGURATION_FOLDER) != null) {
+                configuration = System.getProperty(Constants.CONFIGURATION_FOLDER);
+            } else {
+                configuration = "conf";
+            }
+        }
 
         File dir = new File(configuration);
 
@@ -128,18 +151,5 @@ public class LegacyProtocolConverterResource extends Application {
         }
 
         return false;
-    }
-
-    private Response checkApiKey(HttpServletRequest req) {
-        String API_KEY = System.getenv(Constants.API_KEY_HEADER);
-        if (API_KEY == null && System.getProperty(Constants.API_KEY_HEADER) != null) {
-            API_KEY = System.getProperty(Constants.API_KEY_HEADER);
-        }
-
-        if (API_KEY == null || !API_KEY.equals(req.getHeader(Constants.API_KEY_HEADER))) {
-            return Response.status(Response.Status.UNAUTHORIZED).build();
-        }
-
-        return null;
     }
 }

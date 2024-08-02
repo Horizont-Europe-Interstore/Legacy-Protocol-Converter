@@ -28,6 +28,7 @@ import si.sunesis.interoperability.lpc.transformations.configuration.models.Conf
 import si.sunesis.interoperability.lpc.transformations.configuration.models.RegistrationModel;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.TransformationModel;
 import si.sunesis.interoperability.lpc.transformations.connections.Connections;
+import si.sunesis.interoperability.lpc.transformations.exceptions.LPCException;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -49,12 +50,12 @@ public class TransformationsHandler {
 
     private final ArrayList<TransformationHandler> transformationHandlers = new ArrayList<>();
 
-    public void startHandling() {
+    public void startHandling() throws LPCException {
         configuration.setConsumer(this::restart);
         handleTransformations();
     }
 
-    private void handleTransformations() {
+    private void handleTransformations() throws LPCException {
         Connections connections = new Connections(configuration);
         for (ConfigurationModel configurationModel : configuration.getConfigurations()) {
             RegistrationModel registration = configurationModel.getRegistration();
@@ -84,6 +85,11 @@ public class TransformationsHandler {
         }
 
         transformationHandlers.clear();
-        handleTransformations();
+        try {
+            handleTransformations();
+        } catch (LPCException e) {
+            log.error("Failed to restart handling transformations", e);
+            System.exit(1);
+        }
     }
 }

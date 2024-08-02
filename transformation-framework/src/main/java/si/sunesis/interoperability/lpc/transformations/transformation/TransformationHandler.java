@@ -31,6 +31,7 @@ import si.sunesis.interoperability.lpc.transformations.configuration.models.Mess
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ModbusModel;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.TransformationModel;
 import si.sunesis.interoperability.lpc.transformations.connections.Connections;
+import si.sunesis.interoperability.lpc.transformations.exceptions.LPCException;
 import si.sunesis.interoperability.modbus.ModbusClient;
 
 import java.text.ParseException;
@@ -69,7 +70,7 @@ public class TransformationHandler {
         log.info("Transformation: {}", transformation.getName());
     }
 
-    public void handle() {
+    public void handle() throws LPCException {
         handleConnections();
         handleOutgoingTransformations();
         handleIncomingTransformations();
