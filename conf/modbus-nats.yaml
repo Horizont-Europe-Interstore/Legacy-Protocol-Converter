@@ -3,12 +3,12 @@ connections:
     type: NATS
     host: localhost
     port: 4222
-    reconnect: "true"
+    reconnect: "false"
   - name: MQTT-connection
     type: MQTT
     host: localhost
     port: 1883
-    reconnect: "true"
+    reconnect: "false"
     version: "5"
   - name: Riello-PQI
     type: Modbus

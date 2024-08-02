@@ -27,6 +27,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ConfigurationModel;
 import si.sunesis.interoperability.lpc.transformations.constants.Constants;
+import si.sunesis.interoperability.lpc.transformations.exceptions.LPCException;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -58,12 +59,17 @@ public class Configuration {
 
     @PostConstruct
     private void init() {
-        readConf();
+        try {
+            readConf();
+        } catch (LPCException e) {
+            log.error("Error reading configuration", e);
+            System.exit(1);
+        }
 
         scheduleRead();
     }
 
-    public void readConf() {
+    public void readConf() throws LPCException {
         try {
             configurations.clear();
 
@@ -107,13 +113,13 @@ public class Configuration {
         return resultStringBuilder.toString();
     }
 
-    private File[] readFiles() {
+    private File[] readFiles() throws LPCException {
         String configuration = getConfFolderName();
 
         File dir = new File(configuration);
 
         if (!dir.exists() || !dir.isDirectory()) {
-            throw new RuntimeException("Configuration directory does not exist");
+            throw new LPCException("Configuration directory does not exist");
         }
 
         return dir.listFiles();
