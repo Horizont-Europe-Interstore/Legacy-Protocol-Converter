@@ -95,7 +95,7 @@ public class TransformationHandler {
         outgoingConnections.clear();
     }
 
-    private void handleConnections() {
+    private void handleConnections() throws LPCException {
         incomingConnections.clear();
         outgoingConnections.clear();
 
@@ -119,7 +119,7 @@ public class TransformationHandler {
         }
 
         if (!connections.getModbusConnections(outgoingConnectionNames).isEmpty()) {
-            log.error("Modbus connections are not supported as outgoing connections");
+            throw new LPCException("Modbus connections are not supported as outgoing connections");
         }
 
         for (ModbusClient client : connections.getModbusConnections(incomingConnectionNames).values()) {
