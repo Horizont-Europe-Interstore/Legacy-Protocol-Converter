@@ -135,10 +135,12 @@ public class TransformationHandler {
             String incomingTopic = transformation.getConnections().getIncomingTopic();
             incomingTopic = replacePlaceholders(incomingTopic);
 
+            log.debug("Subscribing to outgoing topic: {}", incomingTopic);
+
             for (RequestHandler incomingConnection : incomingConnections) {
                 incomingConnection.subscribe(incomingTopic, message -> {
                     String msg = new String((byte[]) message);
-                    log.info("Incoming message from device: \n{}", msg);
+                    log.info("Incoming message on topic {} from device: \n{}", transformation.getConnections().getIncomingTopic(), msg);
 
                     String transformedMessage = objectTransformer.transform(msg,
                             transformation.getToOutgoing().getMessage(),
@@ -167,6 +169,8 @@ public class TransformationHandler {
             if (!isModbus()) {
                 String outgoingTopic = transformation.getConnections().getOutgoingTopic();
                 outgoingTopic = replacePlaceholders(outgoingTopic);
+
+                log.debug("Subscribing to incoming topic for non Modbus: {}", outgoingTopic);
 
                 for (RequestHandler outgoingConnection : outgoingConnections) {
                     outgoingConnection.subscribe(outgoingTopic, message -> {
@@ -199,6 +203,8 @@ public class TransformationHandler {
                 String outgoingTopic = transformation.getConnections().getOutgoingTopic();
                 outgoingTopic = replacePlaceholders(outgoingTopic);
 
+                log.debug("Subscribing to incoming topic for Modbus: {}", outgoingTopic);
+
                 for (RequestHandler outgoingConnection : outgoingConnections) {
                     outgoingConnection.subscribe(outgoingTopic, message -> {
                         String msg = new String((byte[]) message);
@@ -216,6 +222,8 @@ public class TransformationHandler {
 
     private void sendMessage(String message, String topic, List<RequestHandler> connections, int retryCount) {
         Map<RequestHandler, String[]> failed = new HashMap<>();
+
+        log.debug("Publishing message to topic: {} with message: {}", topic, message);
 
         for (RequestHandler connection : connections) {
             try {
