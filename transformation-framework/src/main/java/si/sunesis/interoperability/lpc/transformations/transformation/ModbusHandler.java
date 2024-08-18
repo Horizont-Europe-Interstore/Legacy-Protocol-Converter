@@ -171,8 +171,8 @@ public class ModbusHandler {
             registers = DataUtils.BeToRegArray(bytes);
         }
 
-        log.info("Registers: {}", Arrays.toString(registers));
-        log.info("Bytes: {}", Arrays.toString(bytes));
+        log.debug("Registers: {}", Arrays.toString(registers));
+        log.debug("Bytes: {}", Arrays.toString(bytes));
 
         if (modbusModel.getType().contains("int")) {
             if (modbusModel.getType().contains("8")) {
