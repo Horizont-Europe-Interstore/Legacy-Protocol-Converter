@@ -27,7 +27,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import com.google.gson.stream.JsonReader;
 import lombok.extern.slf4j.Slf4j;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -48,7 +47,6 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import java.io.StringReader;
 import java.io.StringWriter;
 import java.text.ParseException;
 import java.time.LocalDateTime;
@@ -89,7 +87,7 @@ public class ObjectTransformer {
         mappingDefinition = mappingDefinition.replace("\"$timestamp\"", String.valueOf(millisecond));
         mappingDefinition = mappingDefinition.replace("$timestamp", String.valueOf(millisecond));
 
-        if(toFormat == null){
+        if (toFormat == null) {
             if (isValidJson(mappingDefinition) != null) {
                 toFormat = "JSON";
             } else if (isValidXml(mappingDefinition) != null) {
