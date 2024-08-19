@@ -34,10 +34,9 @@ import com.intelligt.modbus.jlibmodbus.utils.ModbusFunctionCode;
 import lombok.extern.slf4j.Slf4j;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.MessageModel;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ModbusModel;
+import si.sunesis.interoperability.lpc.transformations.enums.Endianness;
 
 import javax.enterprise.context.ApplicationScoped;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -155,7 +154,8 @@ public class ModbusHandler {
 
                 getValueFromRegisters(holdingRegistersResponse, registerMap, modbusModel, messageModel);
             }
-            default -> log.debug("Function code is write only: {}. So no data to read.", messageModel.getFunctionCode());
+            default ->
+                    log.debug("Function code is write only: {}. So no data to read.", messageModel.getFunctionCode());
         }
     }
 
@@ -166,8 +166,15 @@ public class ModbusHandler {
         int[] registers = response.getHoldingRegisters().getRegisters();
         byte[] bytes = response.getHoldingRegisters().getBytes();
 
-        if (messageModel.getEndianness() == ByteOrder.BIG_ENDIAN) {
-            bytes = convertToLittleEndian(response.getHoldingRegisters().getBytes());
+        if (messageModel.getEndianness() == Endianness.BIG_ENDIAN) {
+            bytes = beToLe(response.getHoldingRegisters().getBytes());
+            registers = DataUtils.BeToRegArray(bytes);
+        } else if (messageModel.getEndianness() == Endianness.BIG_ENDIAN_SWAP) {
+            bytes = beSwapToBe(response.getHoldingRegisters().getBytes());
+            bytes = beToLe(bytes);
+            registers = DataUtils.BeToRegArray(bytes);
+        } else if (messageModel.getEndianness() == Endianness.LITTLE_ENDIAN_SWAP) {
+            bytes = leSwapToLe(response.getHoldingRegisters().getBytes());
             registers = DataUtils.BeToRegArray(bytes);
         }
 
@@ -223,27 +230,50 @@ public class ModbusHandler {
         return Double.longBitsToDouble(getInt64At(offset, registers));
     }
 
-    private static byte[] convertToLittleEndian(byte[] bytes) {
-        if (bytes.length == 1) {
-            return bytes;
+    private static byte[] beToLe(byte[] beBytes) {
+        // AB CD to DC BA
+        if (beBytes.length == 1) {
+            return beBytes;
         }
 
-        ByteBuffer bufferBE = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN);
-
-        int value;
-        // Step 3: Read the value as an integer
-        if (bytes.length == 2) {
-            value = bufferBE.getShort();
-        } else {
-            value = bufferBE.getInt();
+        // Reverse order of array
+        for (int i = 0; i < beBytes.length / 2; i++) {
+            byte temp = beBytes[i];
+            beBytes[i] = beBytes[beBytes.length - 1 - i];
+            beBytes[beBytes.length - 1 - i] = temp;
         }
 
-        // Step 4: Create a new ByteBuffer, set to LITTLE_ENDIAN, and put the value
-        ByteBuffer bufferLE = ByteBuffer.allocate(Integer.SIZE / Byte.SIZE);
-        bufferLE.order(ByteOrder.LITTLE_ENDIAN).putInt(value);
+        return beBytes;
+    }
 
-        // Step 5: Extract the little-endian ordered bytes
-        return bufferLE.array();
+    private static byte[] beSwapToBe(byte[] beSwapBytes) {
+        // BA DC to AB CD
+        if (beSwapBytes.length == 1) {
+            return beSwapBytes;
+        }
+
+        for (int iii = 0; iii < beSwapBytes.length; iii += 2) {
+            byte temp = beSwapBytes[iii];
+            beSwapBytes[iii] = beSwapBytes[iii + 1];
+            beSwapBytes[iii + 1] = temp;
+        }
+
+        return beSwapBytes;
+    }
+
+    private static byte[] leSwapToLe(byte[] leSwapBytes) {
+        // CD AB to DC BA
+        if (leSwapBytes.length == 1) {
+            return leSwapBytes;
+        }
+
+        for (int iii = 0; iii < leSwapBytes.length; iii += 2) {
+            byte temp = leSwapBytes[iii];
+            leSwapBytes[iii] = leSwapBytes[iii + 1];
+            leSwapBytes[iii + 1] = temp;
+        }
+
+        return leSwapBytes;
     }
 
     private static int getNumOfRegisters(String type) {
