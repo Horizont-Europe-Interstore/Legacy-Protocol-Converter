@@ -96,21 +96,15 @@ public class ModbusHandler {
                         new boolean[]{value});
             }
             case WRITE_MULTIPLE_REGISTERS -> {
-                byte[] bytes = toByteArray(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0f), modbusModel);
-                int[] registers = DataUtils.BeToRegArray(bytes);
-
-                log.debug("Writing Bytes: {}", Arrays.toString(bytes));
+                int[] registers = prepareRegsForWriting(messageModel, modbusModel, msgToRegisterMap);
                 log.debug("Writing registers: {}", Arrays.toString(registers));
 
                 request = requestBuilder.buildWriteMultipleRegisters(messageModel.getDeviceId(),
                         modbusModel.getAddress(),
-                        bytes);
+                        registers);
             }
             case READ_WRITE_MULTIPLE_REGISTERS -> {
-                byte[] bytes = toByteArray(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0f), modbusModel);
-                int[] registers = DataUtils.BeToRegArray(bytes);
-
-                log.debug("Writing Bytes: {}", Arrays.toString(bytes));
+                int[] registers = prepareRegsForWriting(messageModel, modbusModel, msgToRegisterMap);
                 log.debug("Writing registers: {}", Arrays.toString(registers));
 
                 request = requestBuilder.buildReadWriteMultipleRegisters(messageModel.getDeviceId(),
@@ -230,7 +224,9 @@ public class ModbusHandler {
         return Double.longBitsToDouble(getInt64At(offset, registers));
     }
 
-    private static byte[] beToLe(byte[] beBytes) {
+    private static byte[] reverseByteArray(byte[] bytes) {
+        byte[] beBytes = Arrays.copyOf(bytes, bytes.length);
+
         // AB CD to DC BA
         if (beBytes.length == 1) {
             return beBytes;
@@ -246,34 +242,45 @@ public class ModbusHandler {
         return beBytes;
     }
 
-    private static byte[] beSwapToBe(byte[] beSwapBytes) {
+    private static byte[] swapBytes(byte[] bytes) {
+        byte[] swapBytes = Arrays.copyOf(bytes, bytes.length);
+
         // BA DC to AB CD
-        if (beSwapBytes.length == 1) {
-            return beSwapBytes;
+        if (swapBytes.length == 1) {
+            return swapBytes;
         }
 
-        for (int iii = 0; iii < beSwapBytes.length; iii += 2) {
-            byte temp = beSwapBytes[iii];
-            beSwapBytes[iii] = beSwapBytes[iii + 1];
-            beSwapBytes[iii + 1] = temp;
+        for (int iii = 0; iii < swapBytes.length; iii += 2) {
+            byte temp = swapBytes[iii];
+            swapBytes[iii] = swapBytes[iii + 1];
+            swapBytes[iii + 1] = temp;
         }
 
-        return beSwapBytes;
+        return swapBytes;
     }
 
-    private static byte[] leSwapToLe(byte[] leSwapBytes) {
-        // CD AB to DC BA
-        if (leSwapBytes.length == 1) {
-            return leSwapBytes;
-        }
+    public static byte[] beToLe(byte[] bytes) {
+        return reverseByteArray(bytes);
+    }
 
-        for (int iii = 0; iii < leSwapBytes.length; iii += 2) {
-            byte temp = leSwapBytes[iii];
-            leSwapBytes[iii] = leSwapBytes[iii + 1];
-            leSwapBytes[iii + 1] = temp;
-        }
+    public static byte[] beSwapToBe(byte[] bytes) {
+        return swapBytes(bytes);
+    }
 
-        return leSwapBytes;
+    public static byte[] leSwapToLe(byte[] bytes) {
+        return swapBytes(bytes);
+    }
+
+    public static byte[] leToLeSwap(byte[] bytes) {
+        return swapBytes(bytes);
+    }
+
+    public static byte[] leToBeSwap(byte[] bytes) {
+        return swapBytes(reverseByteArray(bytes));
+    }
+
+    public static byte[] leToBe(byte[] bytes) {
+        return reverseByteArray(bytes);
     }
 
     private static int getNumOfRegisters(String type) {
@@ -311,5 +318,18 @@ public class ModbusHandler {
         }
 
         return bytes;
+    }
+
+    private static int[] prepareRegsForWriting(MessageModel messageModel, ModbusModel modbusModel, Map<Integer, Float> msgToRegisterMap) {
+        byte[] bytes = toByteArray(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0f), modbusModel);
+
+        if (messageModel.getEndianness().equals(Endianness.BIG_ENDIAN)) {
+            bytes = leToBe(bytes);
+        } else if (messageModel.getEndianness().equals(Endianness.BIG_ENDIAN_SWAP)) {
+            bytes = leToBeSwap(bytes);
+        } else if (messageModel.getEndianness().equals(Endianness.LITTLE_ENDIAN_SWAP)) {
+            bytes = leToLeSwap(bytes);
+        }
+        return DataUtils.BeToRegArray(bytes);
     }
 }
