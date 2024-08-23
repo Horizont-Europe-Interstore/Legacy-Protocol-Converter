@@ -309,10 +309,18 @@ public class ModbusHandler {
         }
     }
 
-    private static byte[] toByteArray(Float value, ModbusModel modbusModel) {
+    public static byte[] toByteArray(Float value, ModbusModel modbusModel) {
         byte[] bytes = DataUtils.toByteArray(value);
         if (modbusModel.getType().contains("int")) {
-            bytes = DataUtils.toByteArray(value.intValue());
+            if (modbusModel.getType().contains("16")) {
+                bytes = DataUtils.toByteArray(value.shortValue());
+            } else if (modbusModel.getType().contains("8")) {
+                bytes = DataUtils.toByteArray(value.byteValue());
+            } else if (modbusModel.getType().contains("64")) {
+                bytes = DataUtils.toByteArray(value.longValue());
+            } else {
+                bytes = DataUtils.toByteArray(value.intValue());
+            }
         } else if (modbusModel.getType().contains("long")) {
             bytes = DataUtils.toByteArray(value.longValue());
         }
