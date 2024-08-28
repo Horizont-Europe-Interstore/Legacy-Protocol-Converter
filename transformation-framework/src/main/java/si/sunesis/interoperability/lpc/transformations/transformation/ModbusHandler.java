@@ -86,11 +86,22 @@ public class ModbusHandler {
             }
             case WRITE_SINGLE_REGISTER -> {
                 int[] registers = prepareRegsForWriting(messageModel, modbusModel, msgToRegisterMap);
-                log.debug("Writing registers: {}", Arrays.toString(registers));
+                log.debug("Writing registers: {}", registers);
+
+                int value;
+                if (registers.length > 1) {
+                    log.warn("More than one register to write. Using only the first one.");
+                    value = registers[0];
+                } else if (registers.length == 0) {
+                    log.warn("No registers to write. Using Float.floatToIntBits.");
+                    value = Float.floatToIntBits(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0f));
+                } else {
+                    value = registers[0];
+                }
 
                 request = requestBuilder.buildWriteSingleRegister(messageModel.getDeviceId(),
                         modbusModel.getAddress(),
-                        registers[0]);
+                        value);
             }
             case READ_EXCEPTION_STATUS -> request = requestBuilder.buildReadExceptionStatus(messageModel.getDeviceId());
             case WRITE_MULTIPLE_COILS -> {
@@ -101,7 +112,7 @@ public class ModbusHandler {
             }
             case WRITE_MULTIPLE_REGISTERS -> {
                 int[] registers = prepareRegsForWriting(messageModel, modbusModel, msgToRegisterMap);
-                log.debug("Writing registers: {}", Arrays.toString(registers));
+                log.debug("Writing registers: {}", registers);
 
                 request = requestBuilder.buildWriteMultipleRegisters(messageModel.getDeviceId(),
                         modbusModel.getAddress(),
@@ -109,7 +120,7 @@ public class ModbusHandler {
             }
             case READ_WRITE_MULTIPLE_REGISTERS -> {
                 int[] registers = prepareRegsForWriting(messageModel, modbusModel, msgToRegisterMap);
-                log.debug("Writing registers: {}", Arrays.toString(registers));
+                log.debug("Writing registers: {}", registers);
 
                 request = requestBuilder.buildReadWriteMultipleRegisters(messageModel.getDeviceId(),
                         modbusModel.getAddress(),
@@ -176,8 +187,8 @@ public class ModbusHandler {
             registers = DataUtils.BeToRegArray(bytes);
         }
 
-        log.debug("Bytes: {}", Arrays.toString(bytes));
-        log.debug("Registers: {}", Arrays.toString(registers));
+        log.debug("Bytes: {}", bytes);
+        log.debug("Registers: {}", registers);
 
         if (modbusModel.getType().contains("int")) {
             if (modbusModel.getType().contains("8")) {
@@ -350,8 +361,8 @@ public class ModbusHandler {
 
         int[] registers = DataUtils.BeToRegArray(bytes);
 
-        log.debug("Bytes: {}", Arrays.toString(bytes));
-        log.debug("Registers: {}", Arrays.toString(registers));
+        log.debug("Bytes: {}", bytes);
+        log.debug("Registers: {}", registers);
 
         return registers;
     }
