@@ -1,62 +1,43 @@
 connections:
-  - name: MQTT-connection
-    type: MQTT
-    host: 37aad5450fca492297d7d3bc3329f4ba.s2.eu.hivemq.cloud
-    port: 8883
-    ssl:
-      default: true
-    username: lpc-user
-    password: zv.NaiixwWZ7wCC
+  - name: NATS-connection
+    type: NATS
+    host: demo.nats.io
+    port: 4222
   - name: Modbus-connection
     type: Modbus
     host: localhost
     port: 5022
 transformations:
-  - name: Modbus to JSON IEEE2030.5 Event
-    description: Example showing transformation of messages from Modbus to JSON
+  - name: Modbus v NATS za IEEE2030.5 ActivePower
+    description: Primer pretvorbe Modbus sporočil v JSON za strukturo ActivePower
     connections:
       incoming-connection:
         - Modbus-connection
       outgoing-connection:
-        - MQTT-connection
-      outgoing-topic: event/myevent
+        - NATS-connection
       outgoing-format: JSON
     to-outgoing:
-      to-topic: event/1/derStatus
-      message: '"activePower": {
+      to-topic: device/attribute/activePower
+      message: |-
+                "activePower": {
                   "multiplier": {
-                    "value": 
+                    "value": 1
                   },
-                  "value": 1
+                  "value": {
+                    "lpc:mapping": {
+                      "path": "32012",
+                      "type": "float"
+                    }
+                  }
                 }
-                '
     interval-request:
-      interval: 3000
+      interval: 5000
       request:
         modbus-function-code: 3
         modbus-device-id: 1
         endianness: little
         modbus-registers:
-          - register-address: 32002
-            type: int16
-          - register-address: 32010
-            type: int32
-  - name: Modbus to JSON IEEE2030.5 Event
-    description: Example showing transformation of messages from Modbus to JSON
-    connections:
-      incoming-connection:
-        - Modbus-connection
-      outgoing-connection:
-        - MQTT-connection
-      outgoing-topic: event/control
-      outgoing-format: JSON
-    to-incoming:
-      modbus-function-code: 6
-      modbus-device-id: 1
-      endianness: little
-      modbus-registers:
-        - register-address: 32002
-          type: int16
-          path: /test
-version: 2.0.0
+          - register-address: 32012
+            type: float32
+version: 1.0.0
 timestamp: 2024-04-10T15:05:34.759Z
