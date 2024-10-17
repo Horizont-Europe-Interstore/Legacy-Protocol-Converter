@@ -34,10 +34,10 @@ import com.intelligt.modbus.jlibmodbus.utils.ModbusFunctionCode;
 import lombok.extern.slf4j.Slf4j;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.MessageModel;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ModbusModel;
+import si.sunesis.interoperability.lpc.transformations.enums.Endianness;
 
 import javax.enterprise.context.ApplicationScoped;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -60,9 +60,8 @@ public class ModbusHandler {
             quantity--;
         }
 
-        log.debug("Quantity: {}", quantity);
-        log.debug("Reading/writing from/to {} registers", quantity);
         log.debug("Starting register address: {}", modbusModel.getAddress());
+        log.debug("Quantity: {}", quantity);
         log.debug("Function code: {} value: {}", ModbusFunctionCode.get(messageModel.getFunctionCode()).name(), ModbusFunctionCode.get(messageModel.getFunctionCode()));
 
         switch (ModbusFunctionCode.get(messageModel.getFunctionCode())) {
@@ -85,9 +84,25 @@ public class ModbusHandler {
                         modbusModel.getAddress(),
                         value);
             }
-            case WRITE_SINGLE_REGISTER -> request = requestBuilder.buildWriteSingleRegister(messageModel.getDeviceId(),
-                    modbusModel.getAddress(),
-                    Float.floatToIntBits(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0f)));
+            case WRITE_SINGLE_REGISTER -> {
+                int[] registers = prepareRegsForWriting(messageModel, modbusModel, msgToRegisterMap);
+                log.debug("Writing registers: {}", registers);
+
+                int value;
+                if (registers.length > 1) {
+                    log.warn("More than one register to write. Using only the first one.");
+                    value = registers[0];
+                } else if (registers.length == 0) {
+                    log.warn("No registers to write. Using Float.floatToIntBits.");
+                    value = Float.floatToIntBits(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0f));
+                } else {
+                    value = registers[0];
+                }
+
+                request = requestBuilder.buildWriteSingleRegister(messageModel.getDeviceId(),
+                        modbusModel.getAddress(),
+                        value);
+            }
             case READ_EXCEPTION_STATUS -> request = requestBuilder.buildReadExceptionStatus(messageModel.getDeviceId());
             case WRITE_MULTIPLE_COILS -> {
                 boolean value = msgToRegisterMap.containsKey(modbusModel.getAddress()) && msgToRegisterMap.get(modbusModel.getAddress()) == 1;
@@ -96,29 +111,22 @@ public class ModbusHandler {
                         new boolean[]{value});
             }
             case WRITE_MULTIPLE_REGISTERS -> {
-                int capacity = getNumOfRegisters(modbusModel.getType());
-                byte[] bytes = ByteBuffer.allocate(capacity).putFloat(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0f)).array();
+                int[] registers = prepareRegsForWriting(messageModel, modbusModel, msgToRegisterMap);
+                log.debug("Writing registers: {}", registers);
 
                 request = requestBuilder.buildWriteMultipleRegisters(messageModel.getDeviceId(),
                         modbusModel.getAddress(),
-                        bytes);
+                        registers);
             }
             case READ_WRITE_MULTIPLE_REGISTERS -> {
-                int capacity = getNumOfRegisters(modbusModel.getType());
-                byte[] bytes = ByteBuffer.allocate(capacity).putFloat(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0f)).array();
-
-                int[] intArray = new int[bytes.length / 2];
-
-                for (int i = 0; i < bytes.length; i += 2) {
-                    // Combine two bytes to form one int
-                    intArray[i / 2] = ((bytes[i] & 0xFF) << 8) | (bytes[i + 1] & 0xFF);
-                }
+                int[] registers = prepareRegsForWriting(messageModel, modbusModel, msgToRegisterMap);
+                log.debug("Writing registers: {}", registers);
 
                 request = requestBuilder.buildReadWriteMultipleRegisters(messageModel.getDeviceId(),
                         modbusModel.getAddress(),
                         quantity,
                         modbusModel.getAddress(),
-                        intArray);
+                        registers);
             }
             default -> log.warn("Function code not supported: {}", messageModel.getFunctionCode());
         }
@@ -155,7 +163,8 @@ public class ModbusHandler {
 
                 getValueFromRegisters(holdingRegistersResponse, registerMap, modbusModel, messageModel);
             }
-            default -> log.debug("Function code is write only: {}", messageModel.getFunctionCode());
+            default ->
+                    log.debug("Function code is write only: {}. So no data to read.", messageModel.getFunctionCode());
         }
     }
 
@@ -164,11 +173,22 @@ public class ModbusHandler {
                                                 ModbusModel modbusModel,
                                                 MessageModel messageModel) {
         int[] registers = response.getHoldingRegisters().getRegisters();
+        byte[] bytes = response.getHoldingRegisters().getBytes();
 
-        if (messageModel.getEndianness() == ByteOrder.BIG_ENDIAN) {
-            byte[] bytes = convertToLittleEndian(response.getHoldingRegisters().getBytes());
+        if (messageModel.getEndianness() == Endianness.BIG_ENDIAN) {
+            bytes = beToLe(response.getHoldingRegisters().getBytes());
+            registers = DataUtils.BeToRegArray(bytes);
+        } else if (messageModel.getEndianness() == Endianness.BIG_ENDIAN_SWAP) {
+            bytes = beSwapToBe(response.getHoldingRegisters().getBytes());
+            bytes = beToLe(bytes);
+            registers = DataUtils.BeToRegArray(bytes);
+        } else if (messageModel.getEndianness() == Endianness.LITTLE_ENDIAN_SWAP) {
+            bytes = leSwapToLe(response.getHoldingRegisters().getBytes());
             registers = DataUtils.BeToRegArray(bytes);
         }
+
+        log.debug("Bytes: {}", bytes);
+        log.debug("Registers: {}", registers);
 
         if (modbusModel.getType().contains("int")) {
             if (modbusModel.getType().contains("8")) {
@@ -219,27 +239,63 @@ public class ModbusHandler {
         return Double.longBitsToDouble(getInt64At(offset, registers));
     }
 
-    private static byte[] convertToLittleEndian(byte[] bytes) {
-        if (bytes.length == 1) {
-            return bytes;
+    private static byte[] reverseByteArray(byte[] bytes) {
+        byte[] beBytes = Arrays.copyOf(bytes, bytes.length);
+
+        // AB CD to DC BA
+        if (beBytes.length == 1) {
+            return beBytes;
         }
 
-        ByteBuffer bufferBE = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN);
-
-        int value;
-        // Step 3: Read the value as an integer
-        if (bytes.length == 2) {
-            value = bufferBE.getShort();
-        } else {
-            value = bufferBE.getInt();
+        // Reverse order of array
+        for (int i = 0; i < beBytes.length / 2; i++) {
+            byte temp = beBytes[i];
+            beBytes[i] = beBytes[beBytes.length - 1 - i];
+            beBytes[beBytes.length - 1 - i] = temp;
         }
 
-        // Step 4: Create a new ByteBuffer, set to LITTLE_ENDIAN, and put the value
-        ByteBuffer bufferLE = ByteBuffer.allocate(Integer.SIZE / Byte.SIZE);
-        bufferLE.order(ByteOrder.LITTLE_ENDIAN).putInt(value);
+        return beBytes;
+    }
 
-        // Step 5: Extract the little-endian ordered bytes
-        return bufferLE.array();
+    private static byte[] swapBytes(byte[] bytes) {
+        byte[] swapBytes = Arrays.copyOf(bytes, bytes.length);
+
+        // BA DC to AB CD
+        if (swapBytes.length == 1) {
+            return swapBytes;
+        }
+
+        for (int iii = 0; iii < swapBytes.length; iii += 2) {
+            byte temp = swapBytes[iii];
+            swapBytes[iii] = swapBytes[iii + 1];
+            swapBytes[iii + 1] = temp;
+        }
+
+        return swapBytes;
+    }
+
+    public static byte[] beToLe(byte[] bytes) {
+        return reverseByteArray(bytes);
+    }
+
+    public static byte[] beSwapToBe(byte[] bytes) {
+        return swapBytes(bytes);
+    }
+
+    public static byte[] leSwapToLe(byte[] bytes) {
+        return swapBytes(bytes);
+    }
+
+    public static byte[] leToLeSwap(byte[] bytes) {
+        return swapBytes(bytes);
+    }
+
+    public static byte[] leToBeSwap(byte[] bytes) {
+        return swapBytes(reverseByteArray(bytes));
+    }
+
+    public static byte[] leToBe(byte[] bytes) {
+        return reverseByteArray(bytes);
     }
 
     private static int getNumOfRegisters(String type) {
@@ -266,5 +322,48 @@ public class ModbusHandler {
         } else {
             throw new IllegalArgumentException("Wrong type");
         }
+    }
+
+    private static byte[] toByteArray(Float value, ModbusModel modbusModel) {
+        byte[] bytes = DataUtils.toByteArray(value);
+        if (modbusModel.getType().contains("int")) {
+            if (modbusModel.getType().contains("16")) {
+                bytes = DataUtils.toByteArray(value.shortValue());
+            } else if (modbusModel.getType().contains("8")) {
+                bytes = DataUtils.toByteArray(value.byteValue());
+            } else if (modbusModel.getType().contains("64")) {
+                bytes = DataUtils.toByteArray(value.longValue());
+            } else {
+                bytes = DataUtils.toByteArray(value.intValue());
+            }
+        } else if (modbusModel.getType().contains("long")) {
+            bytes = DataUtils.toByteArray(value.longValue());
+        } else if (modbusModel.getType().contains("short")) {
+            bytes = DataUtils.toByteArray(value.shortValue());
+        } else if (modbusModel.getType().contains("byte")) {
+            bytes = DataUtils.toByteArray(value.byteValue());
+        }
+
+        return bytes;
+    }
+
+    private static int[] prepareRegsForWriting(MessageModel messageModel, ModbusModel modbusModel, Map<Integer, Float> msgToRegisterMap) {
+        log.debug("Preparing registers for writing");
+        byte[] bytes = toByteArray(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0f), modbusModel);
+
+        if (messageModel.getEndianness().equals(Endianness.BIG_ENDIAN)) {
+            bytes = leToBe(bytes);
+        } else if (messageModel.getEndianness().equals(Endianness.BIG_ENDIAN_SWAP)) {
+            bytes = leToBeSwap(bytes);
+        } else if (messageModel.getEndianness().equals(Endianness.LITTLE_ENDIAN_SWAP)) {
+            bytes = leToLeSwap(bytes);
+        }
+
+        int[] registers = DataUtils.BeToRegArray(bytes);
+
+        log.debug("Bytes: {}", bytes);
+        log.debug("Registers: {}", registers);
+
+        return registers;
     }
 }

@@ -370,9 +370,8 @@ public class Connections {
     }
 
     private KeyManagerFactory buildKeyManagerFactory(ConnectionModel connection) throws LPCException {
-        try {
+        try(FileInputStream inKey = new FileInputStream(connection.getSsl().getClientCertPath())) {
             KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            FileInputStream inKey = new FileInputStream(connection.getSsl().getClientCertPath());
             keyStore.load(inKey, connection.getSsl().getClientCertPassword().toCharArray());
 
             KeyManagerFactory kmf = KeyManagerFactory
@@ -385,9 +384,8 @@ public class Connections {
     }
 
     private TrustManagerFactory buildTrustManagerFactory(ConnectionModel connection) throws LPCException {
-        try {
+        try(FileInputStream in = new FileInputStream(connection.getSsl().getCaCertPath())) {
             KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            FileInputStream in = new FileInputStream(connection.getSsl().getCaCertPath());
             CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
             java.security.cert.Certificate caCert = certFactory.generateCertificate(in);
             trustStore.setCertificateEntry("caCert", caCert);
