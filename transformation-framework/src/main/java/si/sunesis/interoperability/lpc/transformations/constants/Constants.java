@@ -8,4 +8,6 @@ public class Constants {
 
     public static final String API_KEY_HEADER = "API_KEY";
     public static final String CONFIGURATION_FOLDER = "CONFIGURATION";
+
+    public static final String MAPPING_NAME = "lpc:mapping";
 }

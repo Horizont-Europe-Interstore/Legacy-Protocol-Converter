@@ -119,7 +119,6 @@ public abstract class AbstractMapper {
         if (getPath().startsWith("//")) {
             setPath(getPath().substring(1));
         }
-        //setPath(getPath().replace(".", "/"));
 
         JsonNode resultNode = jsonInput.at(getPath());
 

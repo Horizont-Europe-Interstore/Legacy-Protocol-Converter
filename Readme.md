@@ -236,6 +236,7 @@ connections:
 transformations:
   - name: string
     description: string
+    validate-ieee2030-5: true/false
     connections:
       incoming-connection:
         -
@@ -419,6 +420,7 @@ connections:
 transformations:
   - name: JSON IncomingEvent to XML IEEE2030.5 Event
     description: Example showing transformation of messages from JSON to XML
+    validate-ieee2030-5: false
     connections:
       incoming-connection:
         - MQTT-connection
@@ -536,6 +538,7 @@ connections:
 transformations:
   - name: XML IncomingEvent to JSON IEEE2030.5 Event
     description: Example showing transformation of messages from XML to JSON
+    validate-ieee2030-5: false
     connections:
       incoming-connection:
         - MQTT-connection
@@ -632,6 +635,7 @@ connections:
 transformations:
   - name: XML IncomingEvent to JSON IEEE2030.5 Event
     description: Example showing transformation of messages from XML to JSON
+    validate-ieee2030-5: false
     connections:
       incoming-connection:
         - Modbus-connection
@@ -697,6 +701,14 @@ register address.
 Here we have specified that LPC will send a request to the device every 10 seconds to read the data from the registers.
 LPC will for each register send new request with function code specified at ```modbus-function-code``` to specified
 device at```modbus-device-id```.
+
+## Validation of messages for IEEE 2030.5 schema compliance
+New option in the configuration `validate-ieee2030-5` is used to validate the messages for IEEE 2030.5 schema compliance. 
+This option can be individually set for each transformation in the configuration file.
+By setting the value of the option to `true`, LPC will validate the messages for IEEE 2030.5 schema compliance upon starting up. 
+In case of non-compliance, LPC will log the error message and suggest the possible correct structure.
+
+By default, if option is not present in the configuration file, the value of the option is set to `false`.
 
 ## Deployment
 
