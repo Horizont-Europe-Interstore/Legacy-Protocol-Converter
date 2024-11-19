@@ -10,6 +10,7 @@ connections:
 transformations:
   - name: Modbus to JSON IEEE2030.5 Event
     description: Example showing transformation of messages from Modbus to JSON
+    validate-ieee2030-5: false
     connections:
       incoming-connection:
         - Modbus-connection
