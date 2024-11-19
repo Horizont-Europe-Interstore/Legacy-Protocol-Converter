@@ -7,7 +7,10 @@ import org.junit.Assert;
 import org.junit.Test;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ConfigurationModel;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 @Slf4j
 public class TestRun {
