@@ -34,6 +34,9 @@ public class TransformationModel {
 
     private String description;
 
+    @JsonProperty("validate-ieee2030-5")
+    private Boolean validateIEEE2030dot5 = false;
+
     @JsonProperty("connections")
     private TransformationConnectionsModel connections;
 
@@ -45,7 +48,4 @@ public class TransformationModel {
 
     @JsonProperty("to-outgoing")
     private MessageModel toOutgoing;
-
-    @JsonProperty("validate-schema")
-    private Boolean validateSchema = false;
 }

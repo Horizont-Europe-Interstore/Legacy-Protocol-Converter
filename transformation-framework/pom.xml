@@ -29,7 +29,7 @@
             <artifactId>kumuluzee-cors</artifactId>
         </dependency>
 
-
+        <!-- Misc -->
         <dependency>
             <groupId>jakarta.xml.bind</groupId>
             <artifactId>jakarta.xml.bind-api</artifactId>
@@ -46,6 +46,7 @@
             <version>2.34</version>
         </dependency>
 
+        <!-- Test -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

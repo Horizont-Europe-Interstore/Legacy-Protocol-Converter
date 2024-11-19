@@ -20,14 +20,17 @@
  */
 package si.sunesis.interoperability.lpc.transformations.configuration;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ConfigurationModel;
+import si.sunesis.interoperability.lpc.transformations.configuration.models.TransformationModel;
 import si.sunesis.interoperability.lpc.transformations.constants.Constants;
 import si.sunesis.interoperability.lpc.transformations.exceptions.LPCException;
+import si.sunesis.interoperability.lpc.transformations.transformation.ObjectTransformer;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -53,6 +56,8 @@ public class Configuration {
     private final List<ConfigurationModel> configurations = new ArrayList<>();
 
     private final HashMap<String, Long> lastModified = new HashMap<>();
+
+    private final ObjectTransformer objectTransformer = new ObjectTransformer();
 
     @Setter
     private Consumer<Boolean> consumer;
@@ -89,6 +94,8 @@ public class Configuration {
                     ConfigurationModel configurationModel = objectMapper.readValue(
                             fileContent,
                             ConfigurationModel.class);
+
+                    validateTransformations(configurationModel);
 
                     this.configurations.add(configurationModel);
                 }
@@ -201,5 +208,29 @@ public class Configuration {
                 System.exit(1);
             }
         }, 60, 30, TimeUnit.SECONDS);
+    }
+
+    private void validateTransformations(ConfigurationModel configurationModel) {
+        for (TransformationModel transformationModel : configurationModel.getTransformations()) {
+            try {
+                log.info("Validating messages for transformation: {}", transformationModel.getName());
+
+                if (transformationModel.getToOutgoing() != null && transformationModel.getToOutgoing().getMessage() != null) {
+                    objectTransformer.mockTransform(transformationModel.getToOutgoing().getMessage(), transformationModel.getValidateIEEE2030dot5());
+                }
+
+                if (transformationModel.getToIncoming() != null && transformationModel.getToIncoming().getMessage() != null) {
+                    objectTransformer.mockTransform(transformationModel.getToIncoming().getMessage(), transformationModel.getValidateIEEE2030dot5());
+                }
+            } catch (JsonProcessingException ex) {
+                log.error("Error validating transformation: {}", transformationModel.getName());
+                log.error("Error processing JSON: {}", ex.getOriginalMessage());
+                log.error("Json is not valid. At column: {} and line: {}", ex.getLocation().getColumnNr(), ex.getLocation().getLineNr());
+                System.exit(1);
+            } catch (Exception e) {
+                log.error("Error validating transformation: {}. {}", transformationModel.getName(), e.getMessage());
+                System.exit(1);
+            }
+        }
     }
 }

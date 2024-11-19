@@ -32,7 +32,10 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import si.sunesis.interoperability.common.ieee2030dot5.IEEEObjectFactory;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ModbusModel;
+import si.sunesis.interoperability.lpc.transformations.constants.Constants;
 import si.sunesis.interoperability.lpc.transformations.mappers.AbstractMapper;
 import si.sunesis.interoperability.lpc.transformations.mappers.JSONMapper;
 import si.sunesis.interoperability.lpc.transformations.mappers.XMLMapper;
@@ -47,6 +50,7 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import java.io.IOException;
 import java.io.StringWriter;
 import java.text.ParseException;
 import java.time.LocalDateTime;
@@ -63,8 +67,6 @@ import java.util.regex.Pattern;
 @Slf4j
 @ApplicationScoped
 public class ObjectTransformer {
-
-    private static final String MAPPING_NAME = "lpc:mapping";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -206,8 +208,149 @@ public class ObjectTransformer {
         return result;
     }
 
+    public String mockTransform(String mappingDefinition, Boolean validateIEEE2030dot5) throws IOException, SAXException {
+        if (mappingDefinition == null) {
+            throw new IllegalArgumentException("Mapping definition is null");
+        }
+
+        long millisecond = System.currentTimeMillis();
+        String patternZ = "yyyy-MM-dd'T'HH:mm:ss'Z'";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(patternZ);
+        Date date = new Date(millisecond);
+        LocalDateTime ldt = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+        String timestampZ = String.format("\"%s\"", ldt.format(formatter));
+
+        mappingDefinition = mappingDefinition.replace("\"$timestampZ\"", timestampZ);
+        mappingDefinition = mappingDefinition.replace("$timestampZ", timestampZ);
+        mappingDefinition = mappingDefinition.replace("\"$timestamp\"", String.valueOf(millisecond));
+        mappingDefinition = mappingDefinition.replace("$timestamp", String.valueOf(millisecond));
+
+        JsonNode jsonNode = isValidJson(mappingDefinition);
+
+        String transformedString;
+
+        if (jsonNode != null) {
+            Pattern mappingPattern = Pattern.compile("\\{\\s*\"" + Constants.MAPPING_NAME + "\":\\s*\\{(.*?)}\\s*}", Pattern.DOTALL);
+            Matcher mappingMatcher = mappingPattern.matcher(mappingDefinition);
+
+            StringBuilder modifiedMapping = new StringBuilder();
+            while (mappingMatcher.find()) {
+                String mappingContent = mappingMatcher.group(0);
+                JSONMapper mapper = new JSONMapper(mappingContent);
+
+                String value = switch (mapper.getType()) {
+                    case "string" -> "\"string\"";
+                    case "int", "long", "integer" -> "0";
+                    case "float", "double" -> "0.0";
+                    case "date", "datetime" -> String.valueOf(millisecond);
+                    case "boolean" -> "true";
+                    default -> {
+                        // Check for "contains" condition in the default case
+                        String type = mapper.getType();
+                        if (type.contains("int") || type.contains("long")) {
+                            yield "0"; // For integer types
+                        } else if (type.contains("float") || type.contains("double")) {
+                            yield "0.0"; // For integer types
+                        } else {
+                            yield "null"; // For any other types
+                        }
+                    }
+                };
+
+                mappingMatcher.appendReplacement(modifiedMapping, value);
+            }
+            mappingMatcher.appendTail(modifiedMapping);
+
+            JsonNode transformedJsonNode = objectMapper.readTree(modifiedMapping.toString());
+            transformedString = transformedJsonNode.toPrettyString();
+
+            JsonNode validatedJsonNode = isValidJson(transformedString);
+
+            if (validatedJsonNode == null) {
+                throw new IllegalArgumentException("Invalid transformation. Json is not valid.");
+            }
+
+            if (Boolean.TRUE.equals(validateIEEE2030dot5)) {
+                IEEEObjectFactory.validateIEEE2030dot5(transformedString);
+            }
+
+            log.debug("Transformation validated successfully");
+
+            return transformedString;
+        }
+
+        Document document = isValidXml(mappingDefinition);
+
+        if (document != null) {
+            NodeList flowList = document.getElementsByTagName(Constants.MAPPING_NAME);
+            while (flowList.getLength() != 0) {
+                for (int i = 0; i < flowList.getLength(); i++) {
+                    Node parentNode = flowList.item(i).getParentNode();
+
+                    Node mappingNode = flowList.item(i);
+
+                    XMLMapper mapper = new XMLMapper(mappingNode);
+
+                    if (mappingNode.getNodeName().equals(Constants.MAPPING_NAME)) {
+                        parentNode.removeChild(mappingNode);
+                    }
+
+                    String value = switch (mapper.getType()) {
+                        case "string" -> "string";
+                        case "int", "long", "integer" -> "0";
+                        case "float", "double" -> "0.0";
+                        case "date", "datetime" -> String.valueOf(millisecond);
+                        case "boolean" -> "true";
+                        default -> {
+                            // Check for "contains" condition in the default case
+                            String type = mapper.getType();
+                            if (type.contains("int") || type.contains("long")) {
+                                yield "0"; // For integer types
+                            } else if (type.contains("float") || type.contains("double")) {
+                                yield "0.0"; // For integer types
+                            } else {
+                                yield "null"; // For any other types
+                            }
+                        }
+                    };
+
+                    if (value.equals("null")) {
+                        value = "";
+                    } else if (value.startsWith("\"") && value.endsWith("\"")) {
+                        value = value.substring(1, value.length() - 1);
+                    }
+
+                    log.debug("path: {}, value: {}", mapper.getPath(), value);
+
+                    parentNode.setTextContent(value);
+                }
+                flowList = document.getElementsByTagName(Constants.MAPPING_NAME);
+            }
+
+            transformedString = transformXMLToString(document);
+
+            Document validatedDocument = isValidXml(transformedString);
+
+            if (validatedDocument == null) {
+                throw new IllegalArgumentException("Invalid transformation. XML is not valid.");
+            }
+
+            if (Boolean.TRUE.equals(validateIEEE2030dot5)) {
+                IEEEObjectFactory.validateIEEE2030dot5(transformedString);
+            }
+
+            log.debug("Transformation validated successfully");
+
+            return transformedString;
+        }
+
+        objectMapper.readTree(mappingDefinition);
+
+        throw new IllegalArgumentException("Invalid transformation. Input is not valid.");
+    }
+
     private String transformToXML(Object input, Document mappedDocument) throws ParseException {
-        NodeList flowList = mappedDocument.getElementsByTagName(MAPPING_NAME);
+        NodeList flowList = mappedDocument.getElementsByTagName(Constants.MAPPING_NAME);
         while (flowList.getLength() != 0) {
             for (int i = 0; i < flowList.getLength(); i++) {
                 Node parentNode = flowList.item(i).getParentNode();
@@ -216,7 +359,7 @@ public class ObjectTransformer {
 
                 XMLMapper mapper = new XMLMapper(mappingNode);
 
-                if (mappingNode.getNodeName().equals(MAPPING_NAME)) {
+                if (mappingNode.getNodeName().equals(Constants.MAPPING_NAME)) {
                     parentNode.removeChild(mappingNode);
                 }
 
@@ -232,14 +375,14 @@ public class ObjectTransformer {
 
                 parentNode.setTextContent(value);
             }
-            flowList = mappedDocument.getElementsByTagName(MAPPING_NAME);
+            flowList = mappedDocument.getElementsByTagName(Constants.MAPPING_NAME);
         }
 
         return transformXMLToString(mappedDocument);
     }
 
     private String transformToJSON(Object input, String mappingDefinition) throws ParseException {
-        Pattern mappingPattern = Pattern.compile("\\{\\s*\"" + MAPPING_NAME + "\":\\s*\\{(.*?)}\\s*}", Pattern.DOTALL);
+        Pattern mappingPattern = Pattern.compile("\\{\\s*\"" + Constants.MAPPING_NAME + "\":\\s*\\{(.*?)}\\s*}", Pattern.DOTALL);
         Matcher mappingMatcher = mappingPattern.matcher(mappingDefinition);
 
         StringBuilder modifiedMapping = new StringBuilder();

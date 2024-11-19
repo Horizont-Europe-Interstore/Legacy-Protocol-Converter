@@ -23,6 +23,7 @@ package si.sunesis.interoperability.lpc.transformations.mappers;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import si.sunesis.interoperability.lpc.transformations.constants.Constants;
 
 import java.util.Arrays;
 
@@ -36,15 +37,13 @@ public class JSONMapper extends AbstractMapper {
     @SneakyThrows
     public JSONMapper(String mapping) {
         JsonNode root = objectMapper.readTree(mapping);
-        root = root.get("lpc:mapping");
+        root = root.get(Constants.MAPPING_NAME);
 
         setPath(root.get("path").asText());
 
         if (!getPath().startsWith("/")) {
             setPath("/" + getPath());
         }
-
-        //setPath(getPath().replace(".", "/"));
 
         setType(root.get("type").asText());
         if (root.has("pattern")) {

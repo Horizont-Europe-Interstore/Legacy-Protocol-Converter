@@ -1,0 +1,73 @@
+connections:
+  - name: NATS-connection
+    type: NATS
+    host: nats://localhost
+    port: 4222
+    reconnect: true
+  - name: MQTT-connection2
+    type: MQTT
+    ssl:
+      default: true
+    host: 37aad5450fca492297d7d3bc3329f4ba.s2.eu.hivemq.cloud
+    port: 8883
+    username: lpc-user
+    password: zv.NaiixwWZ7wCC
+transformations:
+  - name: XML IncomingEvent to JSON IEEE2030.5 Event
+    description: Example showing transformation of messages from XML to JSON
+    validate-ieee2030-5: false
+    connections:
+      incoming-connection:
+        - MQTT-connection2
+      incoming-topic: topic1
+      outgoing-connection:
+        - NATS-connection
+      outgoing-topic: event/myevent
+      outgoing-format: JSON
+    to-outgoing:
+      to-topic: event/myevent1
+      message: '{
+      "event": {
+        "creationTime": $timestamp,
+        "eventStatus": {
+          "currentStatus": {
+            "lpc:mapping": {
+              "path": "/IncomingEvent/status",
+              "type": "integer",
+              "values": [ "scheduled", "active", "cancelled", "cancelled_with_r", "superseded" ]
+            }
+          },
+          "dateTime": {
+            "lpc:mapping": {
+              "path": "/IncomingEvent/datetime",
+              "type": "datetime",
+              "pattern": "dd-MM-yyyy HH:mm:ss"
+            }
+          },
+          "potentiallySuperseded": false
+        },
+                         "interval": {
+                           "duration": {
+                             "lpc:mapping": {
+                               "path": "/IncomingEvent/duration",
+                               "type": "integer"
+                             }
+                           },
+                           "start": {
+                             "lpc:mapping": {
+                               "path": "/IncomingEvent/start",
+                               "type": "date",
+                               "pattern": "dd-MM-yyyy"
+                             }
+                           }
+                         },
+                         "mriD": {
+                  "value": [
+                    1
+                  ]
+                }
+                         }
+        }
+        '
+version: 1.0.1
+
