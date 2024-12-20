@@ -10,6 +10,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>transformation-framework</module>
+        <module>certificate-management</module>
     </modules>
 
     <properties>
@@ -85,6 +86,13 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- internal dependencies -->
+            <dependency>
+                <groupId>si.sunesis.interoperability.lpc</groupId>
+                <artifactId>certificate-management</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
             <!-- KumuluzEE BOM -->
             <dependency>
                 <groupId>com.kumuluz.ee</groupId>
@@ -120,6 +128,20 @@
                 <groupId>com.fazecast</groupId>
                 <artifactId>jSerialComm</artifactId>
                 <version>${jserialcomm.version}</version>
+            </dependency>
+
+            <!-- https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>1.79</version>
+            </dependency>
+
+            <!-- https://mvnrepository.com/artifact/org.bouncycastle/bcpkix-jdk18on -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk18on</artifactId>
+                <version>1.79</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

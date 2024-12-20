@@ -1,0 +1,30 @@
+connections:
+  - name: NATS-connection
+    type: NATS
+    host: nats://demo.nats.io
+    port: 4222
+    reconnect: true
+  - name: MQTT-connection2
+    type: MQTT
+    activate-certificate: true
+    ssl:
+      preenrollment-cert-password: ktM2S<q-4ya/u=II
+      preenrollment-cert-path: /Users/davidtrafela/Downloads/enelx-certificates/test/preenrollment.p12
+      subject: /C=IT/O=ENELX/OU=esol_ap3562902_qa/CN=sunesis1
+      client-key-path: /Users/davidtrafela/Downloads/enelx-certificates/test/device-key.key
+    host: ax3v62h9b8tp2-ats.iot.eu-central-1.amazonaws.com
+    port: 8883
+transformations:
+  - name: XML IncomingEvent to JSON IEEE2030.5 Event
+    description: Example showing transformation of messages from XML to JSON
+    validate-ieee2030-5: false
+    connections:
+      incoming-connection:
+        - MQTT-connection2
+      incoming-topic: devices/registration
+      outgoing-connection:
+        - NATS-connection
+      outgoing-topic: event/myevent
+      outgoing-format: JSON
+version: 1.0.1
+

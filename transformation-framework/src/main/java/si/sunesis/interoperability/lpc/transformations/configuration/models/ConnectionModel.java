@@ -54,6 +54,9 @@ public class ConnectionModel {
     // MQTT
     private Integer version = 5;
 
+    @JsonProperty("activate-certificate")
+    private Boolean activateCertificate = false;
+
     // RabbitMQ
     @JsonProperty("virtual-host")
     private String virtualHost = "/";

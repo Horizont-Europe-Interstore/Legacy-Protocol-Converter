@@ -26,6 +26,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import si.sunesis.interoperability.common.exceptions.HandlerException;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ConfigurationModel;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.TransformationModel;
 import si.sunesis.interoperability.lpc.transformations.constants.Constants;
@@ -223,12 +224,15 @@ public class Configuration {
                     objectTransformer.mockTransform(transformationModel.getToIncoming().getMessage(), transformationModel.getValidateIEEE2030dot5());
                 }
             } catch (JsonProcessingException ex) {
-                log.error("Error validating transformation: {}", transformationModel.getName());
+                log.error("Error validating transformation: {}", transformationModel.getName(), ex);
                 log.error("Error processing JSON: {}", ex.getOriginalMessage());
                 log.error("Json is not valid. At column: {} and line: {}", ex.getLocation().getColumnNr(), ex.getLocation().getLineNr());
                 System.exit(1);
+            } catch (HandlerException ex) {
+                log.error("Error validating transformation: {}", transformationModel.getName(), ex);
+                System.exit(1);
             } catch (Exception e) {
-                log.error("Error validating transformation: {}. {}", transformationModel.getName(), e.getMessage());
+                log.error("Error validating transformation: {}.", transformationModel.getName(), e);
                 System.exit(1);
             }
         }

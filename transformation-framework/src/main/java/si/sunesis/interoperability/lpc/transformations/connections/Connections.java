@@ -33,7 +33,19 @@ import com.rabbitmq.client.ConnectionFactory;
 import io.nats.client.Options;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.sec.ECPrivateKey;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x9.ECNamedCurveTable;
+import org.bouncycastle.asn1.x9.X9ECParameters;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.jce.spec.ECParameterSpec;
+import org.bouncycastle.jce.spec.ECPrivateKeySpec;
+import org.bouncycastle.util.io.pem.PemReader;
+import si.sunesis.interoperability.common.exceptions.HandlerException;
 import si.sunesis.interoperability.common.interfaces.RequestHandler;
+import si.sunesis.interoperability.lpc.certificate.management.CertificateManagement;
+import si.sunesis.interoperability.lpc.transformations.certificates.CertificateRegistration;
 import si.sunesis.interoperability.lpc.transformations.configuration.Configuration;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ConnectionModel;
 import si.sunesis.interoperability.lpc.transformations.exceptions.LPCException;
@@ -49,9 +61,14 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.KeyFactory;
 import java.security.KeyStore;
+import java.security.PrivateKey;
 import java.security.cert.CertificateFactory;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -106,14 +123,18 @@ public class Connections {
                     throw new LPCException("Error building NATS client", e);
                 }
             } else if (connection.getType().equalsIgnoreCase("MQTT")) {
-                if (connection.getVersion() == 3) {
-                    Mqtt3Client client = buildMqtt3Client(connection);
-                    this.connectionsMap.put(connection.getName(), client);
-                    clientMap.put(connection, client);
-                } else if (connection.getVersion() == 5) {
-                    Mqtt5Client client = buildMqtt5Client(connection);
-                    this.connectionsMap.put(connection.getName(), client);
-                    clientMap.put(connection, client);
+                try {
+                    if (connection.getVersion() == 3) {
+                        Mqtt3Client client = buildMqtt3Client(connection);
+                        this.connectionsMap.put(connection.getName(), client);
+                        clientMap.put(connection, client);
+                    } else if (connection.getVersion() == 5) {
+                        Mqtt5Client client = buildMqtt5Client(connection);
+                        this.connectionsMap.put(connection.getName(), client);
+                        clientMap.put(connection, client);
+                    }
+                } catch (Exception e) {
+                    throw new LPCException("Error building MQTT client", e);
                 }
             } else if (connection.getType().equalsIgnoreCase("modbus")) {
                 if (connection.getHost() == null && connection.getDevice() == null) {
@@ -173,7 +194,9 @@ public class Connections {
         return client;
     }
 
-    private Mqtt3Client buildMqtt3Client(ConnectionModel connection) throws LPCException {
+    private Mqtt3Client buildMqtt3Client(ConnectionModel connection) throws LPCException, IOException, HandlerException, InterruptedException {
+        String generatedDeviceCertPath = generateCertificates(connection);
+
         Mqtt3ClientBuilder client = com.hivemq.client.mqtt.mqtt3.Mqtt3Client.builder()
                 .identifier(connection.getName())
                 .serverHost(connection.getHost())
@@ -198,18 +221,60 @@ public class Connections {
                         .keyManagerFactory(buildKeyManagerFactory(connection))
                         .trustManagerFactory(buildTrustManagerFactory(connection))
                         .applySslConfig();
+            } else if (connection.getSsl().getPreenrollmentCertPath() != null
+                    && connection.getSsl().getClientKeyPath() != null
+                    && Boolean.TRUE.equals(connection.getActivateCertificate())) {
+                client = client.sslConfig()
+                        .keyManagerFactory(buildKeyManagerFactoryUsingKey(connection, generatedDeviceCertPath))
+                        .applySslConfig();
             } else if (Boolean.TRUE.equals(connection.getSsl().getUseDefault())) {
                 client = client.sslWithDefaultConfig();
             }
         }
 
         Mqtt3BlockingClient client1 = client.buildBlocking();
-        client1.connect();
 
-        return new Mqtt3Client(client1.toAsync());
+        Mqtt3Client mqtt3Client;
+
+        if (Boolean.TRUE.equals(connection.getActivateCertificate())) {
+            X509CertificateHolder certificateHolder = CertificateManagement.getCertificateHolder(generatedDeviceCertPath);
+            String commonName = CertificateManagement.getRDNValue(certificateHolder.getSubject(), BCStyle.CN);
+
+            client1 = client.identifier(commonName).buildBlocking();
+
+            // First connect to register the certificate, device will drop connection
+            try {
+                client1.connect();
+            } catch (Exception e) {
+                log.debug("Dropped MQTT connection, expected: {}", e.getMessage());
+            }
+
+            Thread.sleep(5000);
+            client1.connect();
+
+            mqtt3Client = new Mqtt3Client(client1.toAsync());
+
+            // Register gateway
+            String clientId = CertificateRegistration.registerGateway(generatedDeviceCertPath, mqtt3Client);
+
+            client1 = client.identifier(clientId).buildBlocking();
+            client1.connect();
+            mqtt3Client = new Mqtt3Client(client1.toAsync());
+
+            // Register thing
+            CertificateRegistration.registerThing(generatedDeviceCertPath, mqtt3Client);
+        } else {
+            client1.connect();
+
+            mqtt3Client = new Mqtt3Client(client1.toAsync());
+        }
+
+        return mqtt3Client;
     }
 
-    private Mqtt5Client buildMqtt5Client(ConnectionModel connection) throws LPCException {
+    private Mqtt5Client buildMqtt5Client(ConnectionModel connection) throws LPCException, HandlerException, IOException, InterruptedException {
+        String generatedDeviceCertPath = generateCertificates(connection);
+
         Mqtt5ClientBuilder client = com.hivemq.client.mqtt.mqtt5.Mqtt5Client.builder()
                 .identifier(connection.getName())
                 .serverHost(connection.getHost())
@@ -234,15 +299,78 @@ public class Connections {
                         .keyManagerFactory(buildKeyManagerFactory(connection))
                         .trustManagerFactory(buildTrustManagerFactory(connection))
                         .applySslConfig();
+            } else if (connection.getSsl().getPreenrollmentCertPath() != null
+                    && connection.getSsl().getClientKeyPath() != null
+                    && Boolean.TRUE.equals(connection.getActivateCertificate())) {
+                client = client.sslConfig()
+                        .keyManagerFactory(buildKeyManagerFactoryUsingKey(connection, generatedDeviceCertPath))
+                        .applySslConfig();
             } else if (Boolean.TRUE.equals(connection.getSsl().getUseDefault())) {
                 client = client.sslWithDefaultConfig();
             }
         }
 
         Mqtt5BlockingClient client1 = client.buildBlocking();
-        client1.connect();
 
-        return new Mqtt5Client(client1.toAsync());
+        Mqtt5Client mqtt5Client;
+
+        if (Boolean.TRUE.equals(connection.getActivateCertificate())) {
+            X509CertificateHolder certificateHolder = CertificateManagement.getCertificateHolder(generatedDeviceCertPath);
+            String commonName = CertificateManagement.getRDNValue(certificateHolder.getSubject(), BCStyle.CN);
+
+            client1 = client.identifier(commonName).buildBlocking();
+
+            // First connect to register the certificate, device will drop connection
+            try {
+                client1.connect();
+            } catch (Exception e) {
+                log.debug("Dropped MQTT connection, expected: {}", e.getMessage());
+            }
+
+            Thread.sleep(5000);
+            client1.connect();
+
+            mqtt5Client = new Mqtt5Client(client1.toAsync());
+
+            // Register gateway
+            String clientId = CertificateRegistration.registerGateway(generatedDeviceCertPath, mqtt5Client);
+
+            client1 = client.identifier(clientId).buildBlocking();
+            client1.connect();
+            mqtt5Client = new Mqtt5Client(client1.toAsync());
+
+            // Register thing
+            CertificateRegistration.registerThing(generatedDeviceCertPath, mqtt5Client);
+        } else {
+            client1.connect();
+
+            mqtt5Client = new Mqtt5Client(client1.toAsync());
+        }
+
+        return mqtt5Client;
+    }
+
+    private String generateCertificates(ConnectionModel connection) throws LPCException {
+        if (Boolean.TRUE.equals(connection.getActivateCertificate())) {
+            try {
+                String certPath = connection.getSsl().getPreenrollmentCertPath();
+                // Get folder
+                String folder = certPath.substring(0, certPath.lastIndexOf("/"));
+                String csrPath = folder + "/req-generated.p10";
+                String deviceCertPath = folder + "/device-cert.p7";
+
+                return CertificateManagement.getCertificate(connection.getSsl().getPreenrollmentCertPath(),
+                        connection.getSsl().getPreenrollmentCertPassword(),
+                        csrPath,
+                        deviceCertPath,
+                        connection.getSsl().getClientKeyPath(),
+                        connection.getSsl().getSubject());
+            } catch (Exception e) {
+                throw new LPCException("Error getting certificate", e);
+            }
+        }
+
+        return null;
     }
 
     private RabbitMQClient buildRabbitMQClient(ConnectionModel connection) throws IOException, TimeoutException {
@@ -369,8 +497,53 @@ public class Connections {
         return serialParameters;
     }
 
+    private static KeyManagerFactory buildKeyManagerFactoryUsingKey(ConnectionModel connection, String createdCrtPath) throws LPCException {
+        log.info("Building KeyManagerFactory with client key: {}", connection.getSsl().getClientKeyPath());
+        try (FileInputStream fis = new FileInputStream(createdCrtPath)) {
+            // Load the client certificate
+            CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
+            java.security.cert.Certificate clientCert = certFactory.generateCertificate(fis);
+
+            PrivateKey privateKey = parseECPrivateKey(connection.getSsl().getClientKeyPath());
+
+            // Create a KeyStore and add the client certificate and private key
+            KeyStore keyStore = KeyStore.getInstance("PKCS12");
+            keyStore.load(null, null);
+            keyStore.setKeyEntry("clientKey", privateKey, null,
+                    new java.security.cert.Certificate[]{clientCert});
+
+            // Initialize KeyManagerFactory
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            kmf.init(keyStore, null);
+
+            return kmf;
+        } catch (Exception e) {
+            throw new LPCException("Error building KeyManagerFactory", e);
+        }
+    }
+
+    public static PrivateKey parseECPrivateKey(String filePath) throws Exception {
+        log.info("Parsing EC private key from file: {}", filePath);
+
+        String lines = Files.readString(Paths.get(filePath));
+
+        String output = lines.replaceAll("-----BEGIN EC PARAMETERS-----\n.*?\n-----END EC PARAMETERS-----\n", "");
+
+        PemReader reader = new PemReader(new StringReader(output));
+        ECPrivateKey key = ECPrivateKey.getInstance(reader.readPemObject().getContent());
+
+        X9ECParameters ecParameters = ECNamedCurveTable.getByOID(ASN1ObjectIdentifier.getInstance(key.getParametersObject().toASN1Primitive()));
+        ECParameterSpec ecSpec = new ECParameterSpec(
+                ecParameters.getCurve(),
+                ecParameters.getG(),
+                ecParameters.getN(),
+                ecParameters.getH());
+
+        return KeyFactory.getInstance("EC").generatePrivate(new ECPrivateKeySpec(key.getKey(), ecSpec));
+    }
+
     private KeyManagerFactory buildKeyManagerFactory(ConnectionModel connection) throws LPCException {
-        try(FileInputStream inKey = new FileInputStream(connection.getSsl().getClientCertPath())) {
+        try (FileInputStream inKey = new FileInputStream(connection.getSsl().getClientCertPath())) {
             KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
             keyStore.load(inKey, connection.getSsl().getClientCertPassword().toCharArray());
 
@@ -384,7 +557,7 @@ public class Connections {
     }
 
     private TrustManagerFactory buildTrustManagerFactory(ConnectionModel connection) throws LPCException {
-        try(FileInputStream in = new FileInputStream(connection.getSsl().getCaCertPath())) {
+        try (FileInputStream in = new FileInputStream(connection.getSsl().getCaCertPath())) {
             KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
             CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
             java.security.cert.Certificate caCert = certFactory.generateCertificate(in);

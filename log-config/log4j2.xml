@@ -5,22 +5,28 @@
             <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
         </Console>
 
-        <File name="file_debug_app" fileName="logs/debug_app.log">
+        <RollingFile name="file_debug_app" fileName="logs/debug_app.log" filePattern="logs/debug_app.log-%d">
             <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
-        </File>
-        <File name="file_info_app" fileName="logs/app.log">
-            <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
-        </File>
+            <Policies>
+                <!-- Rotate every 2 days -->
+                <TimeBasedTriggeringPolicy interval="2" modulate="true"/>
+            </Policies>
+            <DefaultRolloverStrategy max="1"/>
+        </RollingFile>
 
-        <File name="file_lpc" fileName="logs/lpc.log">
+        <RollingFile name="file_lpc" fileName="logs/lpc.log" filePattern="logs/lpc.log-%d">
             <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
-        </File>
+            <Policies>
+                <!-- Rotate every 2 days -->
+                <TimeBasedTriggeringPolicy interval="2" modulate="true"/>
+            </Policies>
+            <DefaultRolloverStrategy max="1"/>
+        </RollingFile>
     </Appenders>
 
     <Loggers>
         <Root level="debug">
             <AppenderRef ref="console" level="info"/>
-            <AppenderRef ref="file_info_app" level="info"/>
             <AppenderRef ref="file_debug_app" level="debug"/>
         </Root>
 

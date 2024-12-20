@@ -39,6 +39,18 @@ public class SslModel {
     @JsonProperty("client-cert-password")
     private String clientCertPassword;
 
+    @JsonProperty("client-key-path")
+    private String clientKeyPath;
+
     @JsonProperty("default")
     private Boolean useDefault = false;
+
+    @JsonProperty("preenrollment-cert-path")
+    private String preenrollmentCertPath;
+
+    @JsonProperty("preenrollment-cert-password")
+    private String preenrollmentCertPassword;
+
+    @JsonProperty
+    private String subject;
 }
