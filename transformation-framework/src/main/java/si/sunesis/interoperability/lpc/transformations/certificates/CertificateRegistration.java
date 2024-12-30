@@ -28,8 +28,9 @@ public class CertificateRegistration {
                         "device_type": "iot_light_gateway",
                         "management_mode": "jobs",
                         "maker": "Sunesis",
-                        "model": "anyModel",
-                        "serial_number": "SERIAL1",
+                        "model": "Sunesis",
+                        "serial_number": "s001",
+                        "pki_enabled": true,
                         "environment_prefix": "%s",
                         "geolocalization": "40.4518799,-3.6868177"
                     }
@@ -61,21 +62,14 @@ public class CertificateRegistration {
                   "gateway_id": "%s",
                   "parameters": {
                     "thing_id": "%s",
-                    "device_type": "iot_light_gateway",
+                    "device_type": "ieee2030.5",
                     "radio_type": "eth",
                     "model": "emulate_modbus",
-                    "maker": "Fibaro",
+                    "maker": "Sunesis",
                     "serial_number": "12345",
                     "authentication_mode": "gateway",
                     "environment_prefix": "%s",
                     "interaction_mode": "gateway",
-                    "filter_tag": [
-                      {
-                        "id": 102000,
-                        "period": 10,
-                        "tag": "Pulse1"
-                      }
-                    ],
                     "outbound_communication_modes": [
                       "topic"
                     ],
