@@ -62,7 +62,7 @@ public class CertificateRegistration {
                   "gateway_id": "%s",
                   "parameters": {
                     "thing_id": "%s",
-                    "device_type": "ieee2030.5",
+                    "device_type": "ieee2030",
                     "radio_type": "eth",
                     "model": "emulate_modbus",
                     "maker": "Sunesis",
