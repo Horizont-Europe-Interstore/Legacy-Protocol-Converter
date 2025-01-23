@@ -1,26 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration name="kumuluzee">
+<Configuration name="kumuluzee" status="debug">
     <Appenders>
         <Console name="console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
         </Console>
 
-        <RollingFile name="file_debug_app" fileName="logs/debug_app.log" filePattern="logs/debug_app.log-%d">
+        <RollingFile name="file_debug_app" fileName="logs/debug_app.log" filePattern="logs/debug_app-%d-%i.log">
             <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
             <Policies>
                 <!-- Rotate every 2 days -->
-                <TimeBasedTriggeringPolicy interval="2" modulate="true"/>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
-            <DefaultRolloverStrategy max="1"/>
+            <DefaultRolloverStrategy max="1">
+                <Delete basePath="logs" maxDepth="1">
+                    <IfFileName glob="logs/debug_app-*.log"/>
+                    <IfLastModified age="P2D"/>
+                </Delete>
+            </DefaultRolloverStrategy>
         </RollingFile>
 
-        <RollingFile name="file_lpc" fileName="logs/lpc.log" filePattern="logs/lpc.log-%d">
+        <RollingFile name="file_lpc" fileName="logs/lpc.log" filePattern="logs/lpc-%d-%i.log">
             <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
             <Policies>
                 <!-- Rotate every 2 days -->
-                <TimeBasedTriggeringPolicy interval="2" modulate="true"/>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
-            <DefaultRolloverStrategy max="1"/>
+            <DefaultRolloverStrategy max="1">
+                <Delete basePath="logs" maxDepth="1">
+                    <IfFileName glob="logs/lpc-*.log"/>
+                    <IfLastModified age="P2D"/>
+                </Delete>
+            </DefaultRolloverStrategy>
         </RollingFile>
     </Appenders>
 

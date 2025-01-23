@@ -139,8 +139,34 @@ public class CertificateManagement {
         log.info("P7 to PEM conversion successful. PEM device certificate saved to {}", outputPath);
     }
 
+    private static String checkRegistration(String folderPath) {
+        // Get folder
+        String folder = folderPath.substring(0, folderPath.lastIndexOf("/"));
+        String registrationPath = folder + "/registration-successful.txt";
+
+        try {
+            if (Files.exists(Paths.get(registrationPath))) {
+                String path = Files.readString(Paths.get(registrationPath));
+
+                if (!path.isEmpty()) {
+                    return path;
+                }
+            }
+        } catch (IOException e) {
+            log.error("Error reading registration file", e);
+        }
+
+        return null;
+    }
+
     public static String mergePemAndCrt(String pemPath) throws Exception {
         X509CertificateHolder certificateHolder = getCertificateHolder(pemPath);
+
+        String savedPath = checkRegistration(pemPath);
+        if (savedPath != null) {
+            log.info("Device certificate already registered. Returning saved path: {}", savedPath);
+            return savedPath;
+        }
 
         // Extract information
         String commonName = getRDNValue(certificateHolder.getSubject(), BCStyle.CN);

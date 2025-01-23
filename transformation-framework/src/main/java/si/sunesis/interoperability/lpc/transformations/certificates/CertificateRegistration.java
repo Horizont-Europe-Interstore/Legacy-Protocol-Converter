@@ -46,6 +46,16 @@ public class CertificateRegistration {
         return String.format("%s_%s_thing1", organizationalUnit, commonName);
     }
 
+    public static String getClientId(String deviceCertPath) throws IOException {
+        X509CertificateHolder certificateHolder = CertificateManagement.getCertificateHolder(deviceCertPath);
+
+        // Extract information
+        String commonName = CertificateManagement.getRDNValue(certificateHolder.getSubject(), BCStyle.CN);
+        String organizationalUnit = CertificateManagement.getRDNValue(certificateHolder.getSubject(), BCStyle.OU);
+
+        return String.format("%s_%s_thing1", organizationalUnit, commonName);
+    }
+
     public static void registerThing(String deviceCertPath, RequestHandler requestHandler) throws IOException, HandlerException {
         X509CertificateHolder certificateHolder = CertificateManagement.getCertificateHolder(deviceCertPath);
 

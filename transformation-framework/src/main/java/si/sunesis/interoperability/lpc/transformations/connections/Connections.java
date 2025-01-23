@@ -64,6 +64,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyFactory;
@@ -196,6 +197,7 @@ public class Connections {
 
     private Mqtt3Client buildMqtt3Client(ConnectionModel connection) throws LPCException, IOException, HandlerException, InterruptedException {
         String generatedDeviceCertPath = generateCertificates(connection);
+        Boolean registrationExists = registrationExists(connection);
 
         Mqtt3ClientBuilder client = com.hivemq.client.mqtt.mqtt3.Mqtt3Client.builder()
                 .identifier(connection.getName())
@@ -237,6 +239,14 @@ public class Connections {
         Mqtt3Client mqtt3Client;
 
         if (Boolean.TRUE.equals(connection.getActivateCertificate())) {
+            if (Boolean.TRUE.equals(registrationExists)) {
+                String clientId = CertificateRegistration.getClientId(generatedDeviceCertPath);
+
+                client1 = client.identifier(clientId).buildBlocking();
+                client1.connect();
+                return new Mqtt3Client(client1.toAsync());
+            }
+
             X509CertificateHolder certificateHolder = CertificateManagement.getCertificateHolder(generatedDeviceCertPath);
             String commonName = CertificateManagement.getRDNValue(certificateHolder.getSubject(), BCStyle.CN);
 
@@ -263,6 +273,13 @@ public class Connections {
 
             // Register thing
             CertificateRegistration.registerThing(generatedDeviceCertPath, mqtt3Client);
+
+            client1.publishWith()
+                    .topic("esol_ap3562902_qa/sunesis1/test")
+                    .payload("{\"test\": true}".getBytes(StandardCharsets.UTF_8))
+                    .send();
+
+            saveRegistration(true, generatedDeviceCertPath, connection);
         } else {
             client1.connect();
 
@@ -274,6 +291,7 @@ public class Connections {
 
     private Mqtt5Client buildMqtt5Client(ConnectionModel connection) throws LPCException, HandlerException, IOException, InterruptedException {
         String generatedDeviceCertPath = generateCertificates(connection);
+        Boolean registrationExists = registrationExists(connection);
 
         Mqtt5ClientBuilder client = com.hivemq.client.mqtt.mqtt5.Mqtt5Client.builder()
                 .identifier(connection.getName())
@@ -315,6 +333,14 @@ public class Connections {
         Mqtt5Client mqtt5Client;
 
         if (Boolean.TRUE.equals(connection.getActivateCertificate())) {
+            if (Boolean.TRUE.equals(registrationExists)) {
+                String clientId = CertificateRegistration.getClientId(generatedDeviceCertPath);
+
+                client1 = client.identifier(clientId).buildBlocking();
+                client1.connect();
+                return new Mqtt5Client(client1.toAsync());
+            }
+
             X509CertificateHolder certificateHolder = CertificateManagement.getCertificateHolder(generatedDeviceCertPath);
             String commonName = CertificateManagement.getRDNValue(certificateHolder.getSubject(), BCStyle.CN);
 
@@ -341,6 +367,13 @@ public class Connections {
 
             // Register thing
             CertificateRegistration.registerThing(generatedDeviceCertPath, mqtt5Client);
+
+            Boolean registrationSuccessful = client1.publishWith()
+                    .topic("esol_ap3562902_qa/sunesis1/test")
+                    .payload("{\"test\": true}".getBytes(StandardCharsets.UTF_8))
+                    .send().getError().isEmpty();
+
+            saveRegistration(registrationSuccessful, generatedDeviceCertPath, connection);
         } else {
             client1.connect();
 
@@ -348,6 +381,34 @@ public class Connections {
         }
 
         return mqtt5Client;
+    }
+
+    private Boolean registrationExists(ConnectionModel connectionModel) {
+        String certPath = connectionModel.getSsl().getPreenrollmentCertPath();
+        // Get folder
+        String folder = certPath.substring(0, certPath.lastIndexOf("/"));
+        String registrationPath = folder + "/registration-successful.txt";
+
+        return Files.exists(Paths.get(registrationPath));
+    }
+
+    private void saveRegistration(Boolean success, String path, ConnectionModel connection) throws LPCException {
+        if (Boolean.TRUE.equals(success)) {
+            log.info("Registration successful");
+            // Save to file registration successful
+            String certPath = connection.getSsl().getPreenrollmentCertPath();
+            // Get folder
+            String folder = certPath.substring(0, certPath.lastIndexOf("/"));
+            String registrationPath = folder + "/registration-successful.txt";
+
+            try {
+                Files.writeString(Paths.get(registrationPath), path);
+            } catch (IOException e) {
+                throw new LPCException("Registration failed", e);
+            }
+        } else {
+            throw new LPCException("Registration failed");
+        }
     }
 
     private String generateCertificates(ConnectionModel connection) throws LPCException {
@@ -359,12 +420,14 @@ public class Connections {
                 String csrPath = folder + "/req-generated.p10";
                 String deviceCertPath = folder + "/device-cert.p7";
 
-                return CertificateManagement.getCertificate(connection.getSsl().getPreenrollmentCertPath(),
+                String path = CertificateManagement.getCertificate(connection.getSsl().getPreenrollmentCertPath(),
                         connection.getSsl().getPreenrollmentCertPassword(),
                         csrPath,
                         deviceCertPath,
                         connection.getSsl().getClientKeyPath(),
                         connection.getSsl().getSubject());
+
+                return path;
             } catch (Exception e) {
                 throw new LPCException("Error getting certificate", e);
             }
@@ -511,6 +574,7 @@ public class Connections {
             keyStore.load(null, null);
             keyStore.setKeyEntry("clientKey", privateKey, null,
                     new java.security.cert.Certificate[]{clientCert});
+            keyStore.setCertificateEntry("clientCert", clientCert);
 
             // Initialize KeyManagerFactory
             KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
@@ -545,7 +609,11 @@ public class Connections {
     private KeyManagerFactory buildKeyManagerFactory(ConnectionModel connection) throws LPCException {
         try (FileInputStream inKey = new FileInputStream(connection.getSsl().getClientCertPath())) {
             KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            keyStore.load(inKey, connection.getSsl().getClientCertPassword().toCharArray());
+            if (connection.getSsl().getClientCertPassword() == null) {
+                keyStore.load(inKey, null);
+            } else {
+                keyStore.load(inKey, connection.getSsl().getClientCertPassword().toCharArray());
+            }
 
             KeyManagerFactory kmf = KeyManagerFactory
                     .getInstance(KeyManagerFactory.getDefaultAlgorithm());
