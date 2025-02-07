@@ -36,6 +36,8 @@ public class ConfigurationModel {
     private String version = "1.0.0";
     private String timestamp = null;
 
+    private LoggingModel logging = new LoggingModel();
+
     @JsonProperty("transformations")
     private List<TransformationModel> transformations = new ArrayList<>();
 

@@ -37,6 +37,7 @@ import si.sunesis.interoperability.lpc.transformations.configuration.models.Modb
 import si.sunesis.interoperability.lpc.transformations.enums.Endianness;
 
 import javax.enterprise.context.ApplicationScoped;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -114,19 +115,41 @@ public class ModbusHandler {
                 int[] registers = prepareRegsForWriting(messageModel, modbusModel, msgToRegisterMap);
                 log.debug("Writing registers: {}", registers);
 
+                int value;
+                if (registers.length > 1) {
+                    log.warn("More than one register to write. Using only the first one.");
+                    value = registers[0];
+                } else if (registers.length == 0) {
+                    log.warn("No registers to write. Using Float.floatToIntBits.");
+                    value = Float.floatToIntBits(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0f));
+                } else {
+                    value = registers[0];
+                }
+
                 request = requestBuilder.buildWriteMultipleRegisters(messageModel.getDeviceId(),
                         modbusModel.getAddress(),
-                        registers);
+                        new int[]{value});
             }
             case READ_WRITE_MULTIPLE_REGISTERS -> {
                 int[] registers = prepareRegsForWriting(messageModel, modbusModel, msgToRegisterMap);
                 log.debug("Writing registers: {}", registers);
 
+                int value;
+                if (registers.length > 1) {
+                    log.warn("More than one register to write. Using only the first one.");
+                    value = registers[0];
+                } else if (registers.length == 0) {
+                    log.warn("No registers to write. Using Float.floatToIntBits.");
+                    value = Float.floatToIntBits(msgToRegisterMap.getOrDefault(modbusModel.getAddress(), 0f));
+                } else {
+                    value = registers[0];
+                }
+
                 request = requestBuilder.buildReadWriteMultipleRegisters(messageModel.getDeviceId(),
                         modbusModel.getAddress(),
                         quantity,
                         modbusModel.getAddress(),
-                        registers);
+                        new int[]{value});
             }
             default -> log.warn("Function code not supported: {}", messageModel.getFunctionCode());
         }
@@ -190,47 +213,91 @@ public class ModbusHandler {
         log.debug("Bytes: {}", bytes);
         log.debug("Registers: {}", registers);
 
-        if (modbusModel.getType().contains("int")) {
-            if (modbusModel.getType().contains("8")) {
+        String type = modbusModel.getType();
+        if (type.contains("uint")) {
+            // Handle unsigned integers
+            if (type.contains("8")) {
+                // Extract low byte as unsigned 8-bit
+                int regValue = get(0, registers);
+                int uint8Value = regValue & 0xFF;
+                registerMap.put(modbusModel.getAddress(), uint8Value);
+            } else if (type.contains("16")) {
+                registerMap.put(modbusModel.getAddress(), getUInt16At(0, registers));
+            } else if (type.contains("64")) {
+                registerMap.put(modbusModel.getAddress(), getUInt64At(0, registers));
+            } else {
+                registerMap.put(modbusModel.getAddress(), getUInt32At(0, registers));
+            }
+        } else if (type.contains("int")) {
+            // Handle signed integers
+            if (type.contains("8")) {
                 registerMap.put(modbusModel.getAddress(), DataUtils.byteLow(get(0, registers)));
-            } else if (modbusModel.getType().contains("16")) {
+            } else if (type.contains("16")) {
                 registerMap.put(modbusModel.getAddress(), getInt16At(0, registers));
-            } else if (modbusModel.getType().contains("64")) {
+            } else if (type.contains("64")) {
                 registerMap.put(modbusModel.getAddress(), getInt64At(0, registers));
             } else {
                 registerMap.put(modbusModel.getAddress(), getInt32At(0, registers));
             }
-        } else if (modbusModel.getType().contains("long")) {
+        } else if (type.contains("long")) {
             registerMap.put(modbusModel.getAddress(), getInt64At(0, registers));
-        } else if (modbusModel.getType().contains("float")) {
-            if (modbusModel.getType().contains("64")) {
+        } else if (type.contains("float")) {
+            if (type.contains("64")) {
                 registerMap.put(modbusModel.getAddress(), getFloat64At(0, registers));
             } else {
                 registerMap.put(modbusModel.getAddress(), getFloat32At(0, registers));
             }
-        } else if (modbusModel.getType().contains("double")) {
+        } else if (type.contains("double")) {
             registerMap.put(modbusModel.getAddress(), getFloat64At(0, registers));
         } else {
-            throw new IllegalArgumentException("Wrong type");
+            throw new IllegalArgumentException("Wrong type: " + type);
         }
     }
 
+    // Existing methods remain but with corrected signed handling
     public static Integer get(int offset, int[] registers) {
         return registers[offset];
     }
 
+    // Modified methods for signed integers
     public static int getInt16At(int offset, int[] registers) {
-        return get(offset, registers);
+        return (short) registers[offset]; // Correctly returns signed 16-bit
     }
 
     public static int getInt32At(int offset, int[] registers) {
-        return getInt16At(offset, registers) & '\uffff' | (getInt16At(offset + 1, registers) & '\uffff') << 16;
+        if (registers.length < offset + 2) {
+            return getInt16At(offset, registers);
+        }
+        return (getInt16At(offset, registers) << 16) | (getInt16At(offset + 1, registers) & 0xFFFF);
     }
 
     public static long getInt64At(int offset, int[] registers) {
-        return getInt32At(offset, registers) & 4294967295L | (getInt32At(offset + 2, registers) & 4294967295L) << 32;
+        long high = getInt32At(offset, registers);
+        long low = getInt32At(offset + 2, registers) & 0xFFFFFFFFL;
+        return (high << 32) | low;
     }
 
+    // Existing methods for unsigned integers (unchanged)
+    public static int getUInt16At(int offset, int[] registers) {
+        return registers[offset] & 0xFFFF;
+    }
+
+    public static long getUInt32At(int offset, int[] registers) {
+        if (registers.length < offset + 2) {
+            return getUInt16At(offset, registers);
+        }
+        return ((registers[offset] & 0xFFFFL) << 16) | (registers[offset + 1] & 0xFFFFL);
+    }
+
+    public static BigInteger getUInt64At(int offset, int[] registers) {
+        long highPart = getUInt32At(offset, registers);
+        long lowPart = getUInt32At(offset + 2, registers);
+        BigInteger bigHigh = BigInteger.valueOf(highPart).shiftLeft(32);
+        BigInteger bigLow = BigInteger.valueOf(lowPart & 0xFFFFFFFFL);
+        return bigHigh.add(bigLow); // Returns 0-18446744073709551615
+    }
+
+    // Existing float/double methods remain unchanged
     public static float getFloat32At(int offset, int[] registers) {
         return Float.intBitsToFloat(getInt32At(offset, registers));
     }

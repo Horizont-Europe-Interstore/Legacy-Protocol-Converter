@@ -30,6 +30,7 @@ import si.sunesis.interoperability.lpc.transformations.configuration.models.Conf
 import si.sunesis.interoperability.lpc.transformations.configuration.models.TransformationModel;
 import si.sunesis.interoperability.lpc.transformations.constants.Constants;
 import si.sunesis.interoperability.lpc.transformations.exceptions.LPCException;
+import si.sunesis.interoperability.lpc.transformations.logging.LoggingInit;
 import si.sunesis.interoperability.lpc.transformations.transformation.ObjectTransformer;
 
 import javax.annotation.PostConstruct;
@@ -97,10 +98,14 @@ public class Configuration {
 
                     validateTransformations(configurationModel);
 
+                    if (configurationModel.getLogging() != null) {
+                        LoggingInit.init(configurationModel.getLogging());
+                    }
+
                     this.configurations.add(configurationModel);
                 }
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("Error reading configuration", e);
             System.exit(1);
         }

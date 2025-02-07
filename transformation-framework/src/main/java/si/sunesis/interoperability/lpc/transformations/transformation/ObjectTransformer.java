@@ -33,6 +33,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import si.sunesis.interoperability.common.exceptions.HandlerException;
 import si.sunesis.interoperability.common.ieee2030dot5.IEEEObjectFactory;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ModbusModel;
 import si.sunesis.interoperability.lpc.transformations.constants.Constants;
@@ -208,7 +209,7 @@ public class ObjectTransformer {
         return result;
     }
 
-    public String mockTransform(String mappingDefinition, Boolean validateIEEE2030dot5) throws IOException, SAXException {
+    public String mockTransform(String mappingDefinition, Boolean validateIEEE2030dot5) throws IOException, SAXException, HandlerException {
         if (mappingDefinition == null) {
             throw new IllegalArgumentException("Mapping definition is null");
         }
