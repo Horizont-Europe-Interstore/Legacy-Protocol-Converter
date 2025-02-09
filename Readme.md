@@ -41,6 +41,20 @@ to translate messages between different protocols.
 General format of the configuration file is following:
 
 ```yaml
+logging:
+  configuration-name:
+  status:
+  appenders:
+    -
+    -
+  loggers:
+    -
+    -
+  root-logger:
+    level:
+    appender-refs:
+      -
+      -
 connections:
   -
   -
@@ -54,6 +68,170 @@ transformations:
   -
   -
 ```
+
+### Logging
+
+The logging configuration provides a flexible and structured way to configure logging in your application. Below is a
+detailed description of the configuration possibilities for the logging section.
+
+### Quick logging configuration
+
+Quick logging configuration is to just leave logging configuration empty. The default configuration will be used.
+For changing the logging level at the runtime or when launching the LPC using Docker set the environment variable
+`ROOT_LOG_LEVEL` or `LOG_LEVEL` to the desired level. `ROOT_LOG_LEVEL` will change the logging level for the root logger
+and `LOG_LEVEL` will change the logging level for the logger `si.sunesis.interoperability`.
+
+Possible logging levels are: `ALL`, `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`, `OFF`. With `ALL` being the
+lowest and `OFF` being the highest level.
+
+For **production**, we recommend using `ERROR` or higher level.
+
+Example how to change the logging level:
+
+```bash
+docker run -e ROOT_LOG_LEVEL=DEBUG -e LOG_LEVEL=INFO interstore/legacy-protocol-converter:latest
+```
+
+Default configuration is like the following:
+
+```yaml
+logging:
+  configuration-name: lpc
+  status: info
+  appenders:
+    - type: console
+      name: console
+      target: SYSTEM_OUT
+      pattern: "%d %p %logger{36} - %msg%n"
+    - type: RollingFile
+      name: file_lpc
+      fileName: lpc.log
+      filePattern: lpc-%d{yyyy-MM-dd}.log
+      pattern: "%d %p %logger{36} - %msg%n"
+      policies:
+        - type: TimeBasedTriggeringPolicy
+          interval: 1
+          modulate: false
+      default-rollover-strategy:
+        type: Delete
+        deleteFilePattern: "lpc-*.log"
+        deleteAge: 1m
+  root-logger:
+    level: info
+    appender-refs:
+      - ref: console
+        level: info
+  loggers:
+    - name: si.sunesis.interoperability
+      level: debug
+      appender-refs:
+        - ref: file_lpc
+          level: debug
+```
+
+### Detailed logging configuration
+
+#### 1. **General Configuration**
+
+- **`configuration-name`**: This is the name of the logging configuration. By default, it is set to `"lpc"`. You can
+  change this to any string value to identify the configuration.
+- **`status`**: This sets the overall status of the logging configuration. It can be set to either `"debug"` or
+  `"info"`. The default value is `"info"`.
+
+#### 2. **Appenders**
+
+Appenders define where the log messages will be output (e.g., console, file, etc.). Each appender has the following
+configuration options:
+
+- **`name`**: A unique name for the appender.
+- **`type`**: The type of appender (e.g., `Console`, `File`, `RollingFile`, etc.).
+- **`target`**: The target for the appender (e.g., `System.out`, `System.err` for console appenders).
+- **`fileName`**: The name of the file where logs will be written (applicable for file-based appenders).
+- **`filePattern`**: The pattern for the file name, especially useful for rolling file appenders.
+- **`pattern`**: The format of the log messages. The default pattern is `"%d %p -- %c -- %marker %m %X %ex %n"`.
+- **`policies`**: A list of policies that determine when the log file should roll over (e.g., based on time, size,
+  etc.).
+  - **`type`**: The type of triggering policy (e.g., `TimeBasedTriggeringPolicy`, `SizeBasedTriggeringPolicy`,
+    `CronBasedTriggeringPolicy`and `OnStartupTriggeringPolicy`).
+  - **`cron`**: A cron expression for cron-based rollover.
+  - **`size`**: The maximum size of the log file before it rolls over for size-based triggering.
+  - **`minSize`**: The minimum size of the log file before it rolls over for on startup triggering.
+  - **`interval`**: The interval for time-based rollover.
+  - **`modulate`**: Whether to modulate the interval for time-based rollover.
+- **`default-rollover-strategy`**: Configuration for the rollover strategy.
+  - **`type`**: The type of rollover strategy.
+  - **`deleteFilePattern`**: The pattern for files to delete during rollover.
+  - **`deleteAge`**: The age of files to delete during rollover.
+
+#### 3. **Loggers**
+
+Loggers are used to control the logging level and the appenders that will be used for specific parts of your
+application. Each logger has the following configuration options:
+
+- **`name`**: The name of the logger, typically corresponding to a package or class name.
+- **`level`**: The logging level for the logger (e.g., `info`, `debug`, `error`). The default is `"info"`.
+- **`appender-refs`**: A list of appender references that this logger will use.
+  - **`ref`**: The name of the appender to reference.
+  - **`level`**: The logging level for the appender reference. The default is `"info"`.
+
+#### 4. **Root Logger**
+
+The root logger is the default logger that will be used if no other logger is specified. It has the following
+configuration options:
+
+- **`level`**: The logging level for the root logger. The default is `"info"`.
+- **`appender-refs`**: A list of appender references that the root logger will use.
+  - **`ref`**: The name of the appender to reference.
+  - **`level`**: The logging level for the appender reference. The default is `"info"`.
+
+#### Example Configuration in YAML
+
+Here’s an example of how the logging configuration might look in YAML format:
+
+```yaml
+logging:
+  configuration-name: "lpc"
+  status: "info"
+  appenders:
+    - name: "ConsoleAppender"
+      type: "Console"
+      target: "System.out"
+      pattern: "%d %p -- %c -- %marker %m %X %ex %n"
+    - name: "FileAppender"
+      type: "File"
+      fileName: "logs/app.log"
+      filePattern: "logs/app-%d{yyyy-MM-dd}.log"
+      policies:
+        - type: "TimeBasedTriggeringPolicy"
+          interval: 1
+          modulate: true
+      default-rollover-strategy:
+        type: "DefaultRolloverStrategy"
+        deleteFilePattern: "logs/app-%d{yyyy-MM-dd}.log"
+        deleteAge: "30d"
+  loggers:
+    - name: "si.sunesis.interoperability.lpc"
+      level: "debug"
+      appender-refs:
+        - ref: "ConsoleAppender"
+          level: "debug"
+        - ref: "FileAppender"
+          level: "info"
+  root-logger:
+    level: "info"
+    appender-refs:
+      - ref: "ConsoleAppender"
+        level: "info"
+```
+
+#### Summary
+
+- **Appenders**: Define where logs are written (e.g., console, file) and how they are formatted.
+- **Loggers**: Control logging levels and appender references for specific parts of the application.
+- **Root Logger**: The default logger that applies to the entire application if no other logger is specified.
+
+This configuration allows for fine-grained control over logging behavior, enabling you to tailor logging output to your
+specific needs.
 
 ### Connections
 
@@ -727,29 +905,30 @@ Default configuration is following:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration name="kumuluzee">
+<Configuration name="kumuluzee" status="debug">
     <Appenders>
         <Console name="console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
         </Console>
 
-        <File name="file_debug_app" fileName="logs/debug_app.log">
+        <RollingFile name="file_lpc" fileName="logs/lpc.log" filePattern="logs/lpc-%d{yyyy-MM-dd}.log">
             <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
-        </File>
-        <File name="file_info_app" fileName="logs/app.log">
-            <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
-        </File>
-
-        <File name="file_lpc" fileName="logs/lpc.log">
-            <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
-        </File>
+            <Policies>
+                <!-- Rotate every 2 days -->
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="logs" maxDepth="1">
+                    <IfFileName glob="lpc-*.log"/>
+                    <IfLastModified age="1d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
     </Appenders>
 
     <Loggers>
-        <Root level="debug">
+        <Root level="info">
             <AppenderRef ref="console" level="info"/>
-            <AppenderRef ref="file_info_app" level="info"/>
-            <AppenderRef ref="file_debug_app" level="debug"/>
         </Root>
 
         <Logger name="si.sunesis.interoperability" level="debug">

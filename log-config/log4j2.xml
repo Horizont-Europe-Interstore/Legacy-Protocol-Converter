@@ -1,27 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration name="kumuluzee">
+<Configuration name="kumuluzee" status="debug">
     <Appenders>
         <Console name="console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
         </Console>
 
-        <File name="file_debug_app" fileName="logs/debug_app.log">
+        <RollingFile name="file_lpc" fileName="logs/lpc.log" filePattern="logs/lpc-%d{yyyy-MM-dd}.log">
             <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
-        </File>
-        <File name="file_info_app" fileName="logs/app.log">
-            <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
-        </File>
-
-        <File name="file_lpc" fileName="logs/lpc.log">
-            <PatternLayout pattern="%d %p -- %c -- %marker %m %X %ex %n"/>
-        </File>
+            <Policies>
+                <!-- Rotate every 2 days -->
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="logs" maxDepth="1">
+                    <IfFileName glob="lpc-*.log"/>
+                    <IfLastModified age="1d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
     </Appenders>
 
     <Loggers>
-        <Root level="debug">
+        <Root level="info">
             <AppenderRef ref="console" level="info"/>
-            <AppenderRef ref="file_info_app" level="info"/>
-            <AppenderRef ref="file_debug_app" level="debug"/>
         </Root>
 
         <Logger name="si.sunesis.interoperability" level="debug">
