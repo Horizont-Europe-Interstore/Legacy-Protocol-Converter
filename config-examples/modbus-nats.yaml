@@ -49,6 +49,7 @@ transformations:
       request:
         modbus-function-code: 3
         modbus-device-id: 1
+        modbus-library: python
         modbus-registers:
           - register-address: 32000
             type: integer8
