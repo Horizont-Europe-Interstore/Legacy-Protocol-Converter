@@ -439,7 +439,8 @@ transformations:
       retry-count: integer
       modbus-function-code: integer
       modbus-device-id: integer
-      endianness: big/little
+      modbus-library: python/java
+      endianness: big/little/big-swap/little-swap
       modbus-registers:
         - register-address: integer
           path: string
@@ -451,7 +452,8 @@ transformations:
       request:
         modbus-function-code: integer
         modbus-device-id: integer
-        endianness: big/little
+        modbus-library: python/java
+        endianness: big/little/big-swap/little-swap
         modbus-registers:
           - register-address: integer
             path: string
@@ -494,7 +496,8 @@ Messages options:
     - **message:** Message with mappings that will be sent to the specified topic.
     - **modbus-function-code:** Function code for reading/writing data from/to Modbus device.
     - **modbus-device-id:** Client id of the Modbus device.
-    - **endianness:** Endianness of the data, big or little. Default value is little.
+  - **endianness:** Endianness of the data, big, little, big-swap or little-swap. Default value is big.
+  - **modbus-library:** Library used for Modbus TCP communication, either python or java.
     - **modbus-registers:** List of definitions of modbus registers used for writing/reading the data.
 
 Interval request options:
@@ -507,7 +510,8 @@ Interval request options:
     - **message:** Message with mappings that will be sent to the specified topic.
     - **modbus-function-code:** Function code for reading/writing data from/to Modbus device.
     - **modbus-device-id:** Client id of the Modbus device.
-    - **endianness:** Endianness of the data, big or little. Default value is little.
+  - **endianness:** Endianness of the data, big, little, big-swap or little-swap. Default value is big.
+  - **modbus-library:** Library used for Modbus TCP communication, either python or java.
     - **modbus-registers:** List of definitions of modbus registers used for writing/reading the data.
 
 **retry-count** is used for all message structures and it specifies the number of retries for sending the message. If
