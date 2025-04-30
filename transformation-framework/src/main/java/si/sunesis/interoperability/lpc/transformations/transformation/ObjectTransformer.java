@@ -37,6 +37,7 @@ import si.sunesis.interoperability.common.exceptions.HandlerException;
 import si.sunesis.interoperability.common.ieee2030dot5.IEEEObjectFactory;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ModbusModel;
 import si.sunesis.interoperability.lpc.transformations.constants.Constants;
+import si.sunesis.interoperability.lpc.transformations.enums.ValidateIEEE2030Dot5;
 import si.sunesis.interoperability.lpc.transformations.mappers.AbstractMapper;
 import si.sunesis.interoperability.lpc.transformations.mappers.JSONMapper;
 import si.sunesis.interoperability.lpc.transformations.mappers.XMLMapper;
@@ -73,22 +74,24 @@ public class ObjectTransformer {
     private final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
     private final TransformerFactory transformerFactory = TransformerFactory.newInstance();
 
+    /**
+     * Transforms an input object to a different format based on a mapping definition.
+     * Supports transformation between JSON, XML, and other formats.
+     * Handles timestamp replacement in the mapping definition.
+     * Auto-detects input and output formats if not explicitly specified.
+     *
+     * @param objectInput       The input object to transform
+     * @param mappingDefinition The mapping definition specifying how to transform the object
+     * @param fromFormat        The format of the input object (auto-detected if null)
+     * @param toFormat          The target format for the output (auto-detected if null)
+     * @return The transformed object as a string, or null if transformation fails
+     */
     public String transform(Object objectInput, String mappingDefinition, String fromFormat, String toFormat) {
         if (mappingDefinition == null) {
             return null;
         }
 
-        long millisecond = System.currentTimeMillis();
-        String patternZ = "yyyy-MM-dd'T'HH:mm:ss'Z'";
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(patternZ);
-        Date date = new Date(millisecond);
-        LocalDateTime ldt = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-        String timestampZ = String.format("\"%s\"", ldt.format(formatter));
-
-        mappingDefinition = mappingDefinition.replace("\"$timestampZ\"", timestampZ);
-        mappingDefinition = mappingDefinition.replace("$timestampZ", timestampZ);
-        mappingDefinition = mappingDefinition.replace("\"$timestamp\"", String.valueOf(millisecond));
-        mappingDefinition = mappingDefinition.replace("$timestamp", String.valueOf(millisecond));
+        mappingDefinition = replaceTimestamp(mappingDefinition);
 
         if (toFormat == null) {
             if (isValidJson(mappingDefinition) != null) {
@@ -147,7 +150,7 @@ public class ObjectTransformer {
         return null;
     }
 
-    public Map<Integer, Float> transformToModbus(List<ModbusModel> modbusModels, String input, String fromFormat) throws ParseException {
+    public Map<Integer, Float> transformToModbus(List<ModbusModel> modbusModels, String input, String fromFormat) {
         HashMap<Integer, Float> result = new HashMap<>();
 
         JsonNode jsonNode = isValidJson(input);
@@ -161,6 +164,11 @@ public class ObjectTransformer {
             }
 
             for (ModbusModel modbusModel : modbusModels) {
+                if (modbusModel.getDefaultValue() != null) {
+                    result.put(modbusModel.getAddress(), modbusModel.getDefaultValue());
+                    continue;
+                }
+
                 JSONMapper jsonMapper = new JSONMapper(modbusModel.getPath(), modbusModel.getType(), modbusModel.getValues(), modbusModel.getPattern());
                 String value = jsonMapper.getMappedValueJSON(jsonNode);
 
@@ -188,6 +196,11 @@ public class ObjectTransformer {
             }
 
             for (ModbusModel modbusModel : modbusModels) {
+                if (modbusModel.getDefaultValue() != null) {
+                    result.put(modbusModel.getAddress(), modbusModel.getDefaultValue());
+                    continue;
+                }
+
                 XMLMapper xmlMapper = new XMLMapper(modbusModel.getPath(), modbusModel.getType(), modbusModel.getValues(), modbusModel.getPattern());
                 String value = xmlMapper.getMappedValueXML(document);
 
@@ -209,22 +222,25 @@ public class ObjectTransformer {
         return result;
     }
 
-    public String mockTransform(String mappingDefinition, Boolean validateIEEE2030dot5) throws IOException, SAXException, HandlerException {
+    /**
+     * Validates a mapping definition without performing an actual transformation, and returns a mock transformed string.
+     * This is used to verify the correctness of mapping definitions at configuration time.
+     * Can optionally validate IEEE 2030.5 specific formats.
+     *
+     * @param mappingDefinition    The mapping definition to validate
+     * @param validateIEEE2030dot5 Whether to perform IEEE 2030.5 specific validation
+     * @return A mock transformed string based on the mapping definition
+     * @throws IOException      If there is an error reading the mapping definition
+     * @throws SAXException     If there is an error parsing XML
+     * @throws HandlerException If there is an error handling the validation
+     */
+    public String mockTransform(String mappingDefinition, ValidateIEEE2030Dot5 validateIEEE2030dot5) throws IOException, SAXException, HandlerException {
         if (mappingDefinition == null) {
             throw new IllegalArgumentException("Mapping definition is null");
         }
 
         long millisecond = System.currentTimeMillis();
-        String patternZ = "yyyy-MM-dd'T'HH:mm:ss'Z'";
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(patternZ);
-        Date date = new Date(millisecond);
-        LocalDateTime ldt = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-        String timestampZ = String.format("\"%s\"", ldt.format(formatter));
-
-        mappingDefinition = mappingDefinition.replace("\"$timestampZ\"", timestampZ);
-        mappingDefinition = mappingDefinition.replace("$timestampZ", timestampZ);
-        mappingDefinition = mappingDefinition.replace("\"$timestamp\"", String.valueOf(millisecond));
-        mappingDefinition = mappingDefinition.replace("$timestamp", String.valueOf(millisecond));
+        mappingDefinition = replaceTimestamp(mappingDefinition);
 
         JsonNode jsonNode = isValidJson(mappingDefinition);
 
@@ -239,24 +255,7 @@ public class ObjectTransformer {
                 String mappingContent = mappingMatcher.group(0);
                 JSONMapper mapper = new JSONMapper(mappingContent);
 
-                String value = switch (mapper.getType()) {
-                    case "string" -> "\"string\"";
-                    case "int", "long", "integer" -> "0";
-                    case "float", "double" -> "0.0";
-                    case "date", "datetime" -> String.valueOf(millisecond);
-                    case "boolean" -> "true";
-                    default -> {
-                        // Check for "contains" condition in the default case
-                        String type = mapper.getType();
-                        if (type.contains("int") || type.contains("long")) {
-                            yield "0"; // For integer types
-                        } else if (type.contains("float") || type.contains("double")) {
-                            yield "0.0"; // For integer types
-                        } else {
-                            yield "null"; // For any other types
-                        }
-                    }
-                };
+                String value = getMockValue(mapper, millisecond);
 
                 mappingMatcher.appendReplacement(modifiedMapping, value);
             }
@@ -271,7 +270,7 @@ public class ObjectTransformer {
                 throw new IllegalArgumentException("Invalid transformation. Json is not valid.");
             }
 
-            if (Boolean.TRUE.equals(validateIEEE2030dot5)) {
+            if (validateIEEE2030dot5 != ValidateIEEE2030Dot5.NONE) {
                 IEEEObjectFactory.validateIEEE2030dot5(transformedString);
             }
 
@@ -296,24 +295,7 @@ public class ObjectTransformer {
                         parentNode.removeChild(mappingNode);
                     }
 
-                    String value = switch (mapper.getType()) {
-                        case "string" -> "string";
-                        case "int", "long", "integer" -> "0";
-                        case "float", "double" -> "0.0";
-                        case "date", "datetime" -> String.valueOf(millisecond);
-                        case "boolean" -> "true";
-                        default -> {
-                            // Check for "contains" condition in the default case
-                            String type = mapper.getType();
-                            if (type.contains("int") || type.contains("long")) {
-                                yield "0"; // For integer types
-                            } else if (type.contains("float") || type.contains("double")) {
-                                yield "0.0"; // For integer types
-                            } else {
-                                yield "null"; // For any other types
-                            }
-                        }
-                    };
+                    String value = getMockValue(mapper, millisecond);
 
                     if (value.equals("null")) {
                         value = "";
@@ -336,7 +318,7 @@ public class ObjectTransformer {
                 throw new IllegalArgumentException("Invalid transformation. XML is not valid.");
             }
 
-            if (Boolean.TRUE.equals(validateIEEE2030dot5)) {
+            if (validateIEEE2030dot5 != ValidateIEEE2030Dot5.NONE) {
                 IEEEObjectFactory.validateIEEE2030dot5(transformedString);
             }
 
@@ -350,6 +332,36 @@ public class ObjectTransformer {
         throw new IllegalArgumentException("Invalid transformation. Input is not valid.");
     }
 
+    private String getMockValue(AbstractMapper mapper, long millisecond) {
+        return switch (mapper.getType()) {
+            case "string" -> "string";
+            case "int", "long", "integer" -> "0";
+            case "float", "double" -> "0.0";
+            case "date", "datetime" -> String.valueOf(millisecond);
+            case "boolean" -> "true";
+            default -> {
+                // Check for "contains" condition in the default case
+                String type = mapper.getType();
+                if (type.contains("int") || type.contains("long")) {
+                    yield "0"; // For integer types
+                } else if (type.contains("float") || type.contains("double")) {
+                    yield "0.0"; // For integer types
+                } else {
+                    yield "null"; // For any other types
+                }
+            }
+        };
+    }
+
+    /**
+     * Transforms an input object to XML format using a mapping document.
+     * Extracts values from the input object according to the mapping and replaces placeholders in the XML document.
+     *
+     * @param input          The input object to transform (can be JsonNode, Document, or a Map)
+     * @param mappedDocument The XML document containing mapping information
+     * @return The transformed XML as a string
+     * @throws ParseException If there is an error parsing values during transformation
+     */
     private String transformToXML(Object input, Document mappedDocument) throws ParseException {
         NodeList flowList = mappedDocument.getElementsByTagName(Constants.MAPPING_NAME);
         while (flowList.getLength() != 0) {
@@ -446,7 +458,7 @@ public class ObjectTransformer {
         }
     }
 
-    private String getValueFromMapper(AbstractMapper mapper, Object input) throws ParseException {
+    private String getValueFromMapper(AbstractMapper mapper, Object input) {
         String value = null;
         HashMap<Integer, Object> registersMap = isValidMap(input);
         if (input instanceof JsonNode node) {
@@ -484,5 +496,74 @@ public class ObjectTransformer {
         }
 
         return null;
+    }
+
+    private String replaceTimestamp(String mappingDefinition) {
+        long millisecond = System.currentTimeMillis();
+        String patternZ = "yyyy-MM-dd'T'HH:mm:ss'Z'";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(patternZ);
+        Date date = new Date(millisecond);
+        LocalDateTime ldt = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+        String timestampZ = String.format("\"%s\"", ldt.format(formatter));
+
+        mappingDefinition = mappingDefinition.replace("\"$timestampZ\"", timestampZ);
+        mappingDefinition = mappingDefinition.replace("$timestampZ", timestampZ);
+        mappingDefinition = mappingDefinition.replace("\"$timestamp\"", String.valueOf(millisecond));
+        mappingDefinition = mappingDefinition.replace("$timestamp", String.valueOf(millisecond));
+
+        return mappingDefinition;
+    }
+
+    public String validateTransform(String transformedMessage, ValidateIEEE2030Dot5 validateIEEE2030dot5) throws IOException, SAXException, HandlerException {
+        if (transformedMessage == null) {
+            throw new IllegalArgumentException("Message is null");
+        }
+
+        JsonNode jsonNode = isValidJson(transformedMessage);
+
+        String transformedString;
+
+        if (jsonNode != null) {
+            JsonNode transformedJsonNode = objectMapper.readTree(transformedMessage);
+            transformedString = transformedJsonNode.toPrettyString();
+
+            JsonNode validatedJsonNode = isValidJson(transformedString);
+
+            if (validatedJsonNode == null) {
+                throw new IllegalArgumentException("Invalid transformation. Json is not valid.");
+            }
+
+            if (validateIEEE2030dot5 != ValidateIEEE2030Dot5.NONE) {
+                IEEEObjectFactory.validateIEEE2030dot5(transformedString);
+            }
+
+            log.debug("Transformation validated successfully");
+
+            return transformedString;
+        }
+
+        Document document = isValidXml(transformedMessage);
+
+        if (document != null) {
+            transformedString = transformXMLToString(document);
+
+            Document validatedDocument = isValidXml(transformedString);
+
+            if (validatedDocument == null) {
+                throw new IllegalArgumentException("Invalid transformation. XML is not valid.");
+            }
+
+            if (validateIEEE2030dot5 != ValidateIEEE2030Dot5.NONE) {
+                IEEEObjectFactory.validateIEEE2030dot5(transformedString);
+            }
+
+            log.debug("Transformation validated successfully");
+
+            return transformedString;
+        }
+
+        objectMapper.readTree(transformedMessage);
+
+        throw new IllegalArgumentException("Invalid transformation. Input is not valid.");
     }
 }

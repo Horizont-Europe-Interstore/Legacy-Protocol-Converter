@@ -24,27 +24,49 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 /**
+ * Defines connection settings for transformations between different systems.
+ * Specifies incoming and outgoing topics, formats, and connection references.
+ * Links transformations to the actual connection instances defined elsewhere.
+ *
  * @author David Trafela, Sunesis
  * @since 1.0.0
  */
 @Data
 public class TransformationConnectionsModel {
 
+    /**
+     * Topic for receiving incoming messages
+     */
     @JsonProperty("incoming-topic")
     private String incomingTopic;
 
+    /**
+     * Topic for sending outgoing messages
+     */
     @JsonProperty("outgoing-topic")
     private String outgoingTopic;
 
+    /**
+     * Format of incoming messages (e.g., JSON, XML)
+     */
     @JsonProperty("incoming-format")
     private String incomingFormat;
 
+    /**
+     * Format of outgoing messages (e.g., JSON, XML)
+     */
     @JsonProperty("outgoing-format")
     private String outgoingFormat;
 
+    /**
+     * Names of connections to use for receiving messages
+     */
     @JsonProperty("incoming-connection")
     private String[] incomingConnections;
 
+    /**
+     * Names of connections to use for sending messages
+     */
     @JsonProperty("outgoing-connection")
     private String[] outgoingConnections;
 }

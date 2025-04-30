@@ -21,31 +21,71 @@
 package si.sunesis.interoperability.lpc.transformations.configuration.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.Data;
+import si.sunesis.interoperability.lpc.transformations.enums.ValidateIEEE2030Dot5;
 
 /**
+ * Defines a message transformation between different protocols and formats.
+ * Contains configuration for incoming and outgoing message transformations,
+ * connection details, and optional interval-based requests.
+ *
  * @author David Trafela, Sunesis
  * @since 1.0.0
  */
 @Data
 public class TransformationModel {
 
+    /**
+     * Unique identifier for the transformation
+     */
     private String name = null;
 
+    /**
+     * Human-readable description of the transformation's purpose
+     */
     private String description;
 
-    @JsonProperty("validate-ieee2030-5")
-    private Boolean validateIEEE2030dot5 = false;
+    /**
+     * Flag indicating whether to validate against IEEE 2030.5 standard
+     */
+    private ValidateIEEE2030Dot5 validateIEEE2030dot5 = ValidateIEEE2030Dot5.NONE;
 
+    @JsonSetter("validate-ieee2030-5")
+    public void setValidateIEEE2030dot5(String validateIEEE2030dot5) {
+        if (validateIEEE2030dot5 == null) {
+            this.validateIEEE2030dot5 = ValidateIEEE2030Dot5.NONE;
+            return;
+        }
+
+        try {
+            this.validateIEEE2030dot5 = ValidateIEEE2030Dot5.valueOf(validateIEEE2030dot5.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            this.validateIEEE2030dot5 = ValidateIEEE2030Dot5.NONE;
+        }
+    }
+
+    /**
+     * Connection settings for this transformation
+     */
     @JsonProperty("connections")
     private TransformationConnectionsModel connections;
 
+    /**
+     * Message transformation configuration for incoming messages
+     */
     @JsonProperty("to-incoming")
     private MessageModel toIncoming;
 
+    /**
+     * Configuration for periodic data polling requests
+     */
     @JsonProperty("interval-request")
     private IntervalRequestModel intervalRequest;
 
+    /**
+     * Message transformation configuration for outgoing messages
+     */
     @JsonProperty("to-outgoing")
     private MessageModel toOutgoing;
 }

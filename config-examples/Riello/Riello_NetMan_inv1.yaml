@@ -1,0 +1,1247 @@
+connections:
+  - name: NATS-Server
+    type: NATS
+    host: localhost
+    port: 4222
+  - name: MQTT-broker
+    type: MQTT
+    host: 10.0.1.123 # IP of the MQTT broker 
+    port: 1883 # 8086
+    reconnect: true
+  - name: Riello-INV1-Netman
+    type: Modbus
+    host: 10.0.2.123 # IP of the first Netman 204 device
+    port: 502
+transformations:
+  - name: Riello-INV1-NetMan - Modbus to NATS
+    description: Transformation of messages from Modbus to JSON for Riello battery, inverter 1, NetMan board
+    validate-ieee2030-5: both
+    connections:
+      incoming-connection:
+        - Riello-INV1-Netman
+      outgoing-connection:
+        - NATS-Server
+      outgoing-topic: riello.inv1.netman
+      outgoing-format: JSON
+    to-outgoing:
+      to-topic: riello.inv1.netman
+      message: '{
+  "DER": [
+  {
+      "description": "Riello BESS Inverter 1 NetMan",
+      "DERCapability": {
+        "DERType": {
+          "value": 80
+        },
+        "modesSupported": {
+          "dERControlType": {
+            "value": [
+              0,
+              1
+            ]
+          }
+        },
+        "rtgMaxVA": {
+          "value": {
+            "lpc:mapping": {
+              "path": "79",
+              "type": "int16"
+            }
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 61
+          }
+        },
+        "rtgMaxVAR": {
+          "value": 400,
+          "powerOfTenMultiplier": {
+            "value": 3
+          },
+          "uom": {
+            "value": 63
+          }
+        },
+        "rtgMaxW": {
+          "value": {
+            "lpc:mapping": {
+              "path": "79",
+              "type": "int16"
+            }
+          },
+          "powerOfTenMultiplier": {
+            "value": 2
+          },
+          "uom": {
+            "value": 38
+          }
+        },
+        "rtgMinPF": {
+          "displacement": 0.8
+        },
+        "rtgVNom": {
+          "value": {
+            "lpc:mapping": {
+              "path": "77",
+              "type": "int16"
+            }
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 29
+          }
+        }
+      },
+      "StateOfChargeStatusType": {
+        "dateTime" : "$timestamp",
+        "value": {
+          "lpc:mapping": {
+            "path": "51",
+            "type": "int16"
+          }
+        }
+      }
+    }
+  ],
+  "mirrorMeterReadingList": {  
+    "mirrorMeterReading": [
+      {
+        "description": "Input mains star voltage V1",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "11",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 128
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 29
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1InputV1"
+        }
+      },
+      {
+        "description": "Input mains star voltage V2",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "12",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 64
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 29
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1InputV2"
+        }
+      },
+      {
+        "description": "Input mains star voltage V3",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "13",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 32
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 29
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1InputV3"
+        }
+      },
+      {
+        "description": "Input current phase L1",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "14",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 128
+          },
+          "powerOfTenMultiplier": {
+            "value": -1
+          },
+          "uom": {
+            "value": 5
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1InputI1"
+        }
+      },
+      {
+        "description": "Input current phase L2",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "15",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 64
+          },
+          "powerOfTenMultiplier": {
+            "value": -1
+          },
+          "uom": {
+            "value": 5
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1InputI2"
+        }
+      },
+      {
+        "description": "Input current phase L3",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "16",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 32
+          },
+          "powerOfTenMultiplier": {
+            "value": -1
+          },
+          "uom": {
+            "value": 5
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1InputI3"
+        }
+      },
+      {
+        "description": "Input frequency",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "17",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 0
+          },
+          "powerOfTenMultiplier": {
+            "value": -1
+          },
+          "uom": {
+            "value": 33
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1InputF"
+        }
+      },
+      {
+        "description": "Bypass mains star voltage V1",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "21",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 128
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 29
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1BypassV1"
+        }
+      },
+      {
+        "description": "Bypass mains star voltage V2",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "22",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 64
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 29
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1BypassV2"
+        }
+      },
+      {
+        "description": "Bypass mains star voltage V3",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "23",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 32
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 29
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1BypassV3"
+        }
+      },
+      {
+        "description": "Bypass frequency",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "24",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 0
+          },
+          "powerOfTenMultiplier": {
+            "value": -1
+          },
+          "uom": {
+            "value": 33
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1BypassF"
+        }
+      },
+      {
+        "description": "Output star voltage V1",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "25",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 128
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 29
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1OutputV1"
+        }
+      },
+      {
+        "description": "Output star voltage V2",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "26",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 64
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 29
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1OutputV2"
+        }
+      },
+      {
+        "description": "Output star voltage V3",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "27",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 32
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 29
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1OutputV3"
+        }
+      },
+      {
+        "description": "Output current phase L1",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "31",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 128
+          },
+          "powerOfTenMultiplier": {
+            "value": -1
+          },
+          "uom": {
+            "value": 5
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1OutputI1"
+        }
+      },
+      {
+        "description": "Output current phase L2",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "32",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 64
+          },
+          "powerOfTenMultiplier": {
+            "value": -1
+          },
+          "uom": {
+            "value": 5
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1OutputI2"
+        }
+      },
+      {
+        "description": "Output current phase L3",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "33",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 32
+          },
+          "powerOfTenMultiplier": {
+            "value": -1
+          },
+          "uom": {
+            "value": 5
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1OutputI3"
+        }
+      },
+      {
+        "description": "Output active power phase L1",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "40",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 128
+          },
+          "powerOfTenMultiplier": {
+            "value": 2
+          },
+          "uom": {
+            "value": 38
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1OutputP1"
+        }
+      },
+      {
+        "description": "Output active power phase L2",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "41",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 64
+          },
+          "powerOfTenMultiplier": {
+            "value": 2
+          },
+          "uom": {
+            "value": 38
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1OutputP2"
+        }
+      },
+      {
+        "description": "Output active power phase L3",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "42",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 32
+          },
+          "powerOfTenMultiplier": {
+            "value": 2
+          },
+          "uom": {
+            "value": 38
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1OutputP3"
+        }
+      },
+      {
+        "description": "Output frequency",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "43",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 0
+          },
+          "powerOfTenMultiplier": {
+            "value": -1
+          },
+          "uom": {
+            "value": 33
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1OutputF"
+        }
+      },
+      {
+        "description": "Internal UPS temperature",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "61",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 0
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 23
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1TempUPS"
+        }
+      },
+      {
+        "description": "Sensor 1 temperature",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "62",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 0
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 23
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1TempS1"
+        }
+      },
+      {
+        "description": "Sensor 2 temperature",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "63",
+              "type": "int16"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 0
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 23
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1TempS2"
+        }
+      },
+      {
+        "description": "UPS state 1",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "0",
+              "type": "int16"
+            }
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1UPSstate1"
+        }
+      },
+      {
+        "description": "UPS state 2",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "1",
+              "type": "int16"
+            }
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1UPSstate2"
+        }
+      },
+      {
+        "description": "UPS state 3",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "3",
+              "type": "int16"
+            }
+          }
+        },
+        "mrid": {
+          "value": "RielloNetManInv1UPSstate3"
+        }
+      }
+    ],
+    "all": 27,
+    "results": 27
+  }
+}
+       '
+    interval-request:
+      interval: 1000 # Interval in milliseconds
+      request:
+        modbus-function-code: 3  # Function code for reading holding registers
+        modbus-device-id: 1  # Device ID
+        modbus-registers:
+          - register-address: 0 # description: "Input mains star voltage V1"    
+            type: "int16"
+          - register-address: 1 # description: "Input mains star voltage V1"    
+            type: "int16"
+          - register-address: 3 # description: "Input mains star voltage V1"    
+            type: "int16"
+          - register-address: 11 # description: "Input mains star voltage V1"    
+            type: "int16"
+          - register-address: 12 # description: "Input mains star voltage V2"    
+            type: "int16"
+          - register-address: 13 # description: "Input mains star voltage V3"    
+            type: "int16"
+          - register-address: 14 # description: "Input current phase L1"    
+            type: "int16"
+          - register-address: 15 # description: "Input current phase L2"    
+            type: "int16"
+          - register-address: 16 # description: "Input current phase L3"    
+            type: "int16"
+          - register-address: 17 # description: "Input frequency"    
+            type: "int16"
+          - register-address: 21 # description: "Bypass mains star voltage V1"    
+            type: "int16"
+          - register-address: 22 # description: "Bypass mains star voltage V2"    
+            type: "int16"
+          - register-address: 23 # description: "Bypass mains star voltage V3"    
+            type: "int16"
+          - register-address: 24 # description: "Bypass frequency"    
+            type: "int16"
+          - register-address: 25 # description: "Output star voltage V1"    
+            type: "int16"
+          - register-address: 26 # description: "Output star voltage V2"    
+            type: "int16"
+          - register-address: 27 # description: "Output star voltage V3"    
+            type: "int16"
+          - register-address: 31 # description: "Output current phase L1"    
+            type: "int16"
+          - register-address: 32 # description: "Output current phase L2"    
+            type: "int16"
+          - register-address: 33 # description: "Output current phase L3"    
+            type: "int16"
+          - register-address: 40 # description: "Output active power phase L1"    
+            type: "int16"
+          - register-address: 41 # description: "Output active power phase L2"    
+            type: "int16"
+          - register-address: 42 # description: "Output active power phase L3"    
+            type: "int16"
+          - register-address: 43 # description: "Output frequency"    
+            type: "int16"
+          - register-address: 61 # description: "Internal UPS temperature"    
+            type: "int16"
+          - register-address: 62 # description: "Sensor 1 temperature"    
+            type: "int16"
+          - register-address: 63 # description: "Sensor 2 temperature"    
+            type: "int16"
+          - register-address: 51 # description: "Remaining Battery Capacity"    
+            type: "int16"
+          - register-address: 77 # description: "Output nominal voltage (star)"    
+            type: "int16"
+          - register-address: 79 # description: "Output nominal power [VA]"    
+            type: "int16"
+
+  - name: Riello-INV1-Netman - NATS to MQTT
+    description: Transformation of messages from JSON to MQTT for Riello battery, inverter 1, NetMan board
+    connections:
+      incoming-connection:
+        - NATS-Server
+      incoming-topic: riello.inv1.netman # Origin topic in the NATS server (same as outgoing in the Modbus to NATS transformation)
+      outgoing-connection:
+        - MQTT-broker
+      outgoing-format: JSON
+    to-outgoing:
+      to-topic: Riello/INV1/Netman # Destination topic in the MQTT message 
+      message: '{
+         "stateUPS": {
+           "state1": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/24/reading/value",
+                 "type": "int16"
+                }
+             }
+           },
+           "state2": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/25/reading/value",
+                 "type": "int16"
+                }
+             }
+           },
+           "state3": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/26/reading/value",
+                 "type": "int16"
+                }
+             }
+           }
+         },
+         "voltage": {
+           "nominal": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "DER/0/DERCapability/rtgVNom/value",
+                 "type": "int16"
+                }
+             }
+           },
+           "input": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/0/reading/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/1/reading/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/2/reading/value",
+                   "type": "int16"
+                  }
+               }
+             }
+           },
+           "output": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/11/reading/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/12/reading/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/13/reading/value",
+                   "type": "int16"
+                  }
+               }
+             }
+           },
+           "bypass": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/7/reading/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/8/reading/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/9/reading/value",
+                   "type": "int16"
+                  }
+               }
+             }
+           }
+         },
+         "current": {
+           "input": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/3/reading/value",
+                   "type": "int16"
+                  }
+               },
+               "multiplier": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/3/readingType/powerOfTenMultiplier/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/4/reading/value",
+                   "type": "int16"
+                  }
+               },
+               "multiplier": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/4/readingType/powerOfTenMultiplier/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/5/reading/value",
+                   "type": "int16"
+                  }
+               },
+               "multiplier": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/5/readingType/powerOfTenMultiplier/value",
+                   "type": "int16"
+                  }
+               }
+             }
+           },
+           "output": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/14/reading/value",
+                   "type": "int16"
+                  }
+               },
+               "multiplier": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/14/readingType/powerOfTenMultiplier/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/15/reading/value",
+                   "type": "int16"
+                  }
+               },
+               "multiplier": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/15/readingType/powerOfTenMultiplier/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/16/reading/value",
+                   "type": "int16"
+                  }
+               },
+               "multiplier": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/16/readingType/powerOfTenMultiplier/value",
+                   "type": "int16"
+                  }
+               }
+             }
+           }
+         },
+         "power": {
+           "nominal": {
+             "active": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "DER/0/DERCapability/rtgMaxW/value",
+                   "type": "int16"
+                  }
+               },
+               "multiplier": {
+                 "lpc:mapping": {
+                   "path": "DER/0/DERCapability/rtgMaxW/powerOfTenMultiplier/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "reactive": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "DER/0/DERCapability/rtgMaxVAR/value",
+                   "type": "int16"
+                  }
+               },
+               "multiplier": {
+                 "lpc:mapping": {
+                   "path": "DER/0/DERCapability/rtgMaxVAR/powerOfTenMultiplier/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "apparent": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "DER/0/DERCapability/rtgMaxVA/value",
+                   "type": "int16"
+                  }
+               },
+               "multiplier": {
+                 "lpc:mapping": {
+                   "path": "DER/0/DERCapability/rtgMaxVA/powerOfTenMultiplier/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "minPF": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "DER/0/DERCapability/rtgMinPF/displacement",
+                   "type": "int16"
+                  }
+               }
+             }
+           },
+           "outputActive": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/17/reading/value",
+                   "type": "int16"
+                  }
+               },
+               "multiplier": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/17/readingType/powerOfTenMultiplier/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/18/reading/value",
+                   "type": "int16"
+                  }
+               },
+               "multiplier": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/18/readingType/powerOfTenMultiplier/value",
+                   "type": "int16"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/19/reading/value",
+                   "type": "int16"
+                  }
+               },
+               "multiplier": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/19/readingType/powerOfTenMultiplier/value",
+                   "type": "int16"
+                  }
+               }
+             }
+           }
+         },
+         "frequency": {
+           "input": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/6/reading/value",
+                 "type": "int16"
+                }
+             },
+             "multiplier": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/6/readingType/powerOfTenMultiplier/value",
+                 "type": "int16"
+                }
+             }
+           },
+           "output": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/20/reading/value",
+                 "type": "int16"
+                }
+             },
+             "multiplier": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/20/readingType/powerOfTenMultiplier/value",
+                 "type": "int16"
+                }
+             }
+           },
+           "bypass": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/10/reading/value",
+                 "type": "int16"
+                }
+             },
+             "multiplier": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/10/readingType/powerOfTenMultiplier/value",
+                 "type": "int16"
+                }
+             }
+           }
+         },
+         "temperature": {
+           "ups": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/21/reading/value",
+                 "type": "int16"
+                }
+             }
+           },
+           "sensor1": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/22/reading/value",
+                 "type": "int16"
+                }
+             }
+           },
+           "sensor2": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/23/reading/value",
+                 "type": "int16"
+                }
+             }
+           }
+         },
+         "soc": {
+           "value": {
+             "lpc:mapping": {
+               "path": "DER/0/StateOfChargeStatusType/value",
+               "type": "int16"
+              }
+           }
+         }
+       }
+       '

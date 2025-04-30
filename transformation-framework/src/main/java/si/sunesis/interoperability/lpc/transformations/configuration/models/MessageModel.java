@@ -35,25 +35,87 @@ import java.util.List;
 @Data
 public class MessageModel {
 
+    /**
+     * Destination topic for sending messages
+     */
     @JsonProperty("to-topic")
     private String toTopic;
 
+    /**
+     * Topic for receiving reply messages
+     */
     @JsonProperty("reply-from-topic")
     private String fromTopic;
 
+    /**
+     * Message template or content for transformation
+     */
     private String message;
 
+    /**
+     * Modbus function code for Modbus protocol operations
+     */
     @JsonProperty("modbus-function-code")
     private Integer functionCode;
 
+    /**
+     * Modbus device ID for addressing specific devices
+     */
     @JsonProperty("modbus-device-id")
     private Integer deviceId;
 
+    /**
+     * List of Modbus register definitions for data mapping
+     */
     @JsonProperty("modbus-registers")
     private List<ModbusModel> modbusRegisters = new ArrayList<>();
 
-    private Endianness endianness = Endianness.LITTLE_ENDIAN;
+    /**
+     * Byte order for Modbus data interpretation
+     */
+    private Endianness endianness = Endianness.BIG_ENDIAN;
 
+    /**
+     * Modbus library implementation to use ("java" or "python")
+     */
+    private String modbusLibrary = "java";
+
+    /**
+     * Sets the Modbus library implementation to use.
+     * Supports either "java" or "python" as valid values.
+     * If input is null, the current value is preserved.
+     * Defaults to "java" if the input matches "java" (case-insensitive).
+     * Sets to "python" for any other non-null value.
+     *
+     * @param modbusLibrary The name of the Modbus library to use
+     */
+    @JsonSetter("modbus-library")
+    public void setModbusLibrary(String modbusLibrary) {
+        if (modbusLibrary == null) {
+            return;
+        }
+
+        if (modbusLibrary.equalsIgnoreCase("java")) {
+            this.modbusLibrary = "java";
+        } else {
+            this.modbusLibrary = "python";
+        }
+    }
+
+    /**
+     * Sets the endianness format based on a string description.
+     * Parses the input string to determine the appropriate Endianness enum value.
+     * <p>
+     * Supports four formats:
+     * - Big endian (when string contains "big" but not "swap")
+     * - Big endian with swapped bytes (when string contains both "big" and "swap")
+     * - Little endian (when string doesn't contain "big" and doesn't contain "swap")
+     * - Little endian with swapped bytes (when string doesn't contain "big" but contains "swap")
+     * <p>
+     * If input is null, the current value is preserved.
+     *
+     * @param endianness The string description of the endianness format
+     */
     @JsonSetter
     public void setEndianness(String endianness) {
         if (endianness == null) {

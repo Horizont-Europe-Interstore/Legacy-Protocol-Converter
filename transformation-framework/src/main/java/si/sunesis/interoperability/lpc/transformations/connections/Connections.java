@@ -71,13 +71,24 @@ public class Connections {
     @Getter
     private final Map<String, RequestHandler> connectionsMap = new HashMap<>();
 
+    @Getter
+    private final Map<String, ConnectionModel> connectionModelMap = new HashMap<>();
+
     public Connections(Configuration configuration) throws LPCException {
         this.configuration = configuration;
         init();
     }
 
+    /**
+     * Initializes all connections defined in the configuration files.
+     * Clears existing connections, reads configuration, and creates appropriate clients based on connection type.
+     * Supports NATS, MQTT (v3 and v5), Modbus, and RabbitMQ connection types.
+     *
+     * @throws LPCException If there is an error creating any connection
+     */
     public void init() throws LPCException {
         connectionsMap.clear();
+        connectionModelMap.clear();
 
         List<ConnectionModel> yamlConnections = configuration.getConfigurations().stream()
                 .flatMap(item -> item.getConnections().stream())
@@ -88,6 +99,8 @@ public class Connections {
         log.debug("Found {} connections", yamlConnections.size());
         for (ConnectionModel connection : yamlConnections) {
             RequestHandler requestHandler = clientMap.get(connection);
+
+            this.connectionModelMap.put(connection.getName(), connection);
 
             if (requestHandler != null) {
                 log.debug("Connection {} already exists under different name", connection.getName());
@@ -102,7 +115,11 @@ public class Connections {
                     NatsRequestHandler natsRequestHandler = new NatsRequestHandler(client);
                     this.connectionsMap.put(connection.getName(), natsRequestHandler);
                     clientMap.put(connection, natsRequestHandler);
-                } catch (InterruptedException | IOException e) {
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new LPCException("Interrupted NATS client", e);
+                } catch (Exception e) {
+                    log.error("Error building NATS client", e);
                     throw new LPCException("Error building NATS client", e);
                 }
             } else if (connection.getType().equalsIgnoreCase("MQTT")) {
@@ -141,6 +158,12 @@ public class Connections {
         }
     }
 
+    /**
+     * Retrieves all Modbus connections or a subset specified by name.
+     *
+     * @param connectionNames Optional names of specific Modbus connections to retrieve
+     * @return Map of Modbus connection names to their client instances
+     */
     public Map<String, ModbusClient> getModbusConnections(String... connectionNames) {
         HashMap<String, ModbusClient> modbusConnections = new HashMap<>();
         for (Map.Entry<String, RequestHandler> entry : connectionsMap.entrySet()) {
@@ -156,6 +179,14 @@ public class Connections {
         return modbusConnections;
     }
 
+    /**
+     * Builds a NATS client based on connection configuration.
+     *
+     * @param connection The connection model containing NATS configuration parameters
+     * @return A configured and connected NatsConnection instance
+     * @throws IOException          If there is an error establishing the connection
+     * @throws InterruptedException If the thread is interrupted during connection
+     */
     private NatsConnection buildNatsClient(ConnectionModel connection) throws IOException, InterruptedException {
         NatsConnection client = new NatsConnection();
 
@@ -370,7 +401,7 @@ public class Connections {
     }
 
     private KeyManagerFactory buildKeyManagerFactory(ConnectionModel connection) throws LPCException {
-        try(FileInputStream inKey = new FileInputStream(connection.getSsl().getClientCertPath())) {
+        try (FileInputStream inKey = new FileInputStream(connection.getSsl().getClientCertPath())) {
             KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
             keyStore.load(inKey, connection.getSsl().getClientCertPassword().toCharArray());
 
@@ -384,7 +415,7 @@ public class Connections {
     }
 
     private TrustManagerFactory buildTrustManagerFactory(ConnectionModel connection) throws LPCException {
-        try(FileInputStream in = new FileInputStream(connection.getSsl().getCaCertPath())) {
+        try (FileInputStream in = new FileInputStream(connection.getSsl().getCaCertPath())) {
             KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
             CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
             java.security.cert.Certificate caCert = certFactory.generateCertificate(in);

@@ -24,21 +24,37 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 /**
+ * Configuration model for SSL/TLS settings used in secure connections.
+ * Contains paths to certificates, passwords, and configuration options
+ * needed to establish secure connections with external systems.
+ *
  * @author David Trafela, Sunesis
  * @since 1.0.0
  */
 @Data
 public class SslModel {
 
+    /**
+     * Path to the CA certificate file for SSL verification
+     */
     @JsonProperty("ca-cert-path")
     private String caCertPath;
 
+    /**
+     * Path to the client certificate file for SSL authentication
+     */
     @JsonProperty("client-cert-path")
     private String clientCertPath;
 
+    /**
+     * Password for the client certificate
+     */
     @JsonProperty("client-cert-password")
     private String clientCertPassword;
 
+    /**
+     * Flag to use default system SSL configuration instead of custom certificates
+     */
     @JsonProperty("default")
     private Boolean useDefault = false;
 }

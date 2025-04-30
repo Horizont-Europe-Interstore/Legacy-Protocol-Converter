@@ -1,0 +1,978 @@
+connections:
+  - name: NATS-Server
+    type: NATS
+    host: localhost
+    port: 4222
+  - name: MQTT-broker
+    type: MQTT
+    host: 10.0.1.123 # IP of the MQTT broker
+    port: 8086
+    reconnect: true
+  - name: Janitza-Modbus
+    type: Modbus
+    host: 10.0.2.123 # # IP of the Janitza device
+    port: 502
+transformations:
+  - name: Janitza-input - Modbus to NATS
+    description: Transformation of messages from Modbus to JSON for Janiza
+    validate-ieee2030-5: both
+    connections:
+      incoming-connection:
+        - Janitza-Modbus
+      outgoing-connection:
+        - NATS-Server
+      outgoing-topic: janitza.Input
+      outgoing-format: JSON
+    to-outgoing:
+      to-topic: janitza.Input
+      message: '{
+  "mirrorMeterReadingList": {
+    "mirrorMeterReading": [
+      {
+        "description": "Frequency",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "800",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 0
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 33
+          }
+        },
+        "mrid": {
+          "value": "001"
+        }
+      },
+      {
+        "description": "Voltage U1 L1-N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "808",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 128
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 29
+          }
+        },
+        "mrid": {
+          "value": "002"
+        }
+      },
+      {
+        "description": "Voltage U1 L2-N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "810",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 64
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 29
+          }
+        },
+        "mrid": {
+          "value": "003"
+        }
+      },
+      {
+        "description": "Voltage U1 L3-N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "812",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 32
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 29
+          }
+        },
+        "mrid": {
+          "value": "004"
+        }
+      },
+      {
+        "description": "THD U1 L1N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "836",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 128
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 0
+          }
+        },
+        "mrid": {
+          "value": "005"
+        }
+      },
+      {
+        "description": "THD U2 L2N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "838",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 64
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 0
+          }
+        },
+        "mrid": {
+          "value": "006"
+        }
+      },
+      {
+        "description": "THD U3 L3N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "840",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 32
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 0
+          }
+        },
+        "mrid": {
+          "value": "007"
+        }
+      },
+      {
+        "description": "Current I1 L1",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "860",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 128
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 5
+          }
+        },
+        "mrid": {
+          "value": "008"
+        }
+      },
+      {
+        "description": "Current I1 L2",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "862",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 64
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 5
+          }
+        },
+        "mrid": {
+          "value": "009"
+        }
+      },
+      {
+        "description": "Current I1 L3",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "864",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 32
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 5
+          }
+        },
+        "mrid": {
+          "value": "010"
+        }
+      },
+      {
+        "description": "Active power P1 L1N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "868",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 128
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 38
+          }
+        },
+        "mrid": {
+          "value": "011"
+        }
+      },
+      {
+        "description": "Active power P2 L2N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "870",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 870
+          },
+          "powerOfTenMultiplier": {
+            "value": 2
+          },
+          "uom": {
+            "value": 38
+          }
+        },
+        "mrid": {
+          "value": "012"
+        }
+      },
+      {
+        "description": "Active power P3 L3N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "872",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 32
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 38
+          }
+        },
+        "mrid": {
+          "value": "013"
+        }
+      },
+      {
+        "description": "Reactive power fund. Q01 L1N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "876",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 128
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 63
+          }
+        },
+        "mrid": {
+          "value": "014"
+        }
+      },
+      {
+        "description": "Reactive power fund. Q02 L2N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "878",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 64
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 63
+          }
+        },
+        "mrid": {
+          "value": "015"
+        }
+      },
+      {
+        "description": "Reactive power fund. Q03 L3N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "880",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 32
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 63
+          }
+        },
+        "mrid": {
+          "value": "016"
+        }
+      },
+      {
+        "description": "Apparent power S1 L1N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "884",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 128
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 38
+          }
+        },
+        "mrid": {
+          "value": "017"
+        }
+      },
+      {
+        "description": "Apparent power S2 L2N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "886",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 64
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 38
+          }
+        },
+        "mrid": {
+          "value": "018"
+        }
+      },
+      {
+        "description": "Apparent power S3 L3N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "896",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 32
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 38
+          }
+        },
+        "mrid": {
+          "value": "019"
+        }
+      },
+      {
+        "description": "Active power fund. P01 L1N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "892",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 128
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 38
+          }
+        },
+        "mrid": {
+          "value": "020"
+        }
+      },
+      {
+        "description": "Active power fund. P02 L2N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "894",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 870
+          },
+          "powerOfTenMultiplier": {
+            "value": 2
+          },
+          "uom": {
+            "value": 38
+          }
+        },
+        "mrid": {
+          "value": "021"
+        }
+      },
+      {
+        "description": "Active power fund. P03 L3N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "896",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 32
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 38
+          }
+        },
+        "mrid": {
+          "value": "022"
+        }
+      },
+      {
+        "description": "THD I1 L1N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "908",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 128
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 0
+          }
+        },
+        "mrid": {
+          "value": "023"
+        }
+      },
+      {
+        "description": "THD I2 L2N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "910",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 64
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 0
+          }
+        },
+        "mrid": {
+          "value": "024"
+        }
+      },
+      {
+        "description": "THD I3 L3N",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "912",
+              "type": "float32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 32
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 0
+          }
+        },
+        "mrid": {
+          "value": "025"
+        }
+      }
+    ],
+    "all": 25,
+    "results": 25
+  }
+}
+       '
+    interval-request:
+      interval: 1000 # Interval in milliseconds
+      request:
+        modbus-function-code: 3  # Function code for reading holding registers
+        modbus-device-id: 1  # Device ID
+        endianness: big-swap
+        modbus-registers:
+          - register-address: 800  # description: "Frequency"    
+            type: "float32"
+          - register-address: 808  # description: "Voltage U1 L1-N"    
+            type: "float32"
+          - register-address: 810  # description: "Voltage U2 L2-N"    
+            type: "float32"
+          - register-address: 812  # description: "Voltage U3 L3-N"    
+            type: "float32"
+          - register-address: 836  # description: "THD U1 L1N"    
+            type: "float32"
+          - register-address: 838  # description: "THD U2 L2N"    
+            type: "float32"
+          - register-address: 840  # description: "THD U3 L3N"    
+            type: "float32"
+          - register-address: 860  # description: "Current I1 L1"    
+            type: "float32"
+          - register-address: 862  # description: "Current I2 L2"    
+            type: "float32"
+          - register-address: 864  # description: "Current I3 L3"    
+            type: "float32"
+          - register-address: 868  # description: "Active power P1 L1N"    
+            type: "float32"
+          - register-address: 870  # description: "Active power P2 L2N"    
+            type: "float32"
+          - register-address: 872  # description: "Active power P3 L3N"    
+            type: "float32"
+          - register-address: 876  # description: "Reactive power fund. Q01 L1N"    
+            type: "float32"
+          - register-address: 878  # description: "Reactive power fund. Q02 L2N"    
+            type: "float32"
+          - register-address: 880  # description: "Reactive power fund. Q03 L3N"    
+            type: "float32"
+          - register-address: 884  # description: "Apparent power S1 L1N"    
+            type: "float32"
+          - register-address: 886  # description: "Apparent power S2 L2N"    
+            type: "float32"
+          - register-address: 888  # description: "Apparent power S3 L3N"    
+            type: "float32"
+          - register-address: 892  # description: "Active power fund. P01 L1N"    
+            type: "float32"
+          - register-address: 894  # description: "Active power fund. P02 L2N"    
+            type: "float32"
+          - register-address: 896  # description: "Active power fund. P03 L3N"    
+            type: "float32"
+          - register-address: 908  # description: "THD I1 L1"    
+            type: "float32"
+          - register-address: 910  # description: "THD I2 L2"    
+            type: "float32"
+          - register-address: 912  # description: "THD I3 L3"    
+            type: "float32"
+
+  - name: Janitza-input - NATS to MQTT
+    description: Transformation of messages from JSON to MQTT for Riello battery, inverter 1, Input board
+    connections:
+      incoming-connection:
+        - NATS-Server
+      incoming-topic: janitza.Input # Origin topic in the NATS server (same as outgoing in the Modbus to NATS transformation)
+      outgoing-connection:
+        - MQTT-broker
+      outgoing-format: JSON
+    to-outgoing:
+      to-topic: janitza/input # Destination topic in the MQTT message "Riello" bucket is specified on Telegraf  
+      message: '{
+         "frequency": {
+           "value": {
+             "lpc:mapping": {
+               "path": "mirrorMeterReadingList/mirrorMeterReading/0/reading/value",
+               "type": "float32"
+              }
+           }
+         },
+         "voltage": {
+           "ph1": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/1/reading/value",
+                 "type": "float32"
+                }
+             }
+           },
+           "ph2": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/2/reading/value",
+                 "type": "float32"
+                }
+             }
+           },
+           "ph3": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/3/reading/value",
+                 "type": "float32"
+                }
+             }
+           }
+         },
+         "current": {
+           "ph1": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/7/reading/value",
+                 "type": "float32"
+                }
+             }
+           },
+           "ph2": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/8/reading/value",
+                 "type": "float32"
+                }
+             }
+           },
+           "ph3": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/9/reading/value",
+                 "type": "float32"
+                }
+             }
+           }
+         },
+         "power": {
+           "Active": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/10/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/11/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/12/reading/value",
+                   "type": "float32"
+                  }
+               }
+             }
+           },
+           "Reactive_fund": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/13/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/14/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/15/reading/value",
+                   "type": "float32"
+                  }
+               }
+             }
+           },
+           "Apparent": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/16/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/17/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/18/reading/value",
+                   "type": "float32"
+                  }
+               }
+             }
+           },
+           "Active_fund": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/19/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/20/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/21/reading/value",
+                   "type": "float32"
+                  }
+               }
+             }
+           }
+         },
+         "thd": {
+           "voltage": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/4/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/5/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/6/reading/value",
+                   "type": "float32"
+                  }
+               }
+             }
+           },
+           "current": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/22/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/23/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/24/reading/value",
+                   "type": "float32"
+                  }
+               }
+             }
+           }
+         }
+       }
+       '

@@ -23,18 +23,46 @@ package si.sunesis.interoperability.lpc.transformations.configuration.models;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
-
+/**
+ * Represents a Modbus register configuration for data mapping.
+ * Defines how to map between Modbus registers and message fields
+ * including register address, data type, and optional value mappings.
+ *
+ * @author David Trafela, Sunesis
+ * @since 1.0.0
+ */
 @Data
 public class ModbusModel {
 
+    /**
+     * Modbus register address for reading/writing data
+     */
     @JsonProperty("register-address")
     private Integer address;
 
+    /**
+     * Path to the data field in message for mapping
+     */
     private String path;
 
+    /**
+     * Data type of the register (e.g., int, float, string)
+     */
     private String type;
 
+    /**
+     * Format pattern for date/time values
+     */
     private String pattern;
 
+    /**
+     * Array of possible values for enum-like mappings
+     */
     private String[] values;
+
+    /**
+     * Default value to use when no mapping is found
+     */
+    @JsonProperty("default")
+    private Float defaultValue;
 }

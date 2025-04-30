@@ -7,7 +7,10 @@ import org.junit.Assert;
 import org.junit.Test;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ConfigurationModel;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 @Slf4j
 public class TestRun {
@@ -24,7 +27,7 @@ public class TestRun {
                 ConfigurationModel.class);
 
         Assert.assertEquals(2, configurationModel.getConnections().size());
-        Assert.assertEquals(1, configurationModel.getTransformations().size());
+        Assert.assertEquals(2, configurationModel.getTransformations().size());
         Assert.assertNull(configurationModel.getTransformations().get(0).getToIncoming());
     }
 

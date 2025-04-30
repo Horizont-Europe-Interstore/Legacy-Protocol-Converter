@@ -23,13 +23,23 @@ package si.sunesis.interoperability.lpc.transformations.configuration.models;
 import lombok.Data;
 
 /**
+ * Defines an interval-based request configuration for polling data periodically.
+ * Contains the interval period and the message model that defines the request.
+ * Used for scenarios where data needs to be fetched at regular intervals.
+ *
  * @author David Trafela, Sunesis
  * @since 1.0.0
  */
 @Data
 public class IntervalRequestModel {
 
+    /**
+     * Time interval in seconds between periodic requests
+     */
     private Integer interval;
 
+    /**
+     * Message configuration for the periodic request
+     */
     private MessageModel request;
 }

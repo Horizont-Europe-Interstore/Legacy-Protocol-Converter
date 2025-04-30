@@ -40,6 +40,13 @@ import java.util.Arrays;
 @Slf4j
 public class XMLMapper extends AbstractMapper {
 
+    /**
+     * Constructs an XMLMapper from an XML Node.
+     * Extracts path, type, pattern, and values from the child nodes.
+     * Ensures proper formatting of the XPath expression.
+     *
+     * @param node The XML node containing mapping information
+     */
     public XMLMapper(Node node) {
         NodeList childNodes = node.getChildNodes();
 

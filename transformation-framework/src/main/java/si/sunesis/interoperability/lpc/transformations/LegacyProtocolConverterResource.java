@@ -35,6 +35,9 @@ import java.io.*;
 import java.nio.file.Files;
 
 /**
+ * RESTful API controller for managing Legacy Protocol Converter configurations.
+ * Provides endpoints for uploading and downloading configuration files.
+ *
  * @author David Trafela, Sunesis
  * @since 1.0.1
  */
@@ -43,6 +46,14 @@ import java.nio.file.Files;
 @Path("/lpc/config")
 public class LegacyProtocolConverterResource extends Application {
 
+    /**
+     * Uploads a configuration file via HTTP POST.
+     * Accepts YAML configuration files through multipart form data.
+     *
+     * @param file Input stream containing the configuration file
+     * @param req  HTTP request context
+     * @return HTTP response with success status or error
+     */
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     public Response uploadFile(@FormDataParam("file") InputStream file, @Context HttpServletRequest req) {
@@ -90,11 +101,24 @@ public class LegacyProtocolConverterResource extends Application {
         return Response.ok(json, MediaType.APPLICATION_JSON).build();
     }
 
+    /**
+     * Handles HTTP OPTIONS request for CORS preflight.
+     * Enables cross-origin resource sharing for API endpoints.
+     *
+     * @return Empty HTTP response with OK status
+     */
     @OPTIONS
     public Response options() {
         return Response.ok().build();
     }
 
+    /**
+     * Downloads the configuration file via HTTP GET.
+     * Provides the current configuration as a YAML file attachment.
+     *
+     * @param req HTTP request context
+     * @return HTTP response with file content or error status
+     */
     @GET
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     public Response downloadFile(@Context HttpServletRequest req) {
@@ -134,6 +158,14 @@ public class LegacyProtocolConverterResource extends Application {
                 .build();
     }
 
+    /**
+     * Utility method to save an input stream to a file.
+     * Handles reading from the input stream and writing to a local file.
+     *
+     * @param uploadedInputStream  Source input stream containing file data
+     * @param uploadedFileLocation Destination file path
+     * @return True if save was successful, false otherwise
+     */
     private boolean saveToFile(InputStream uploadedInputStream,
                                String uploadedFileLocation) {
         try (OutputStream out = new FileOutputStream(uploadedFileLocation)) {

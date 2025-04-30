@@ -414,7 +414,7 @@ connections:
 transformations:
   - name: string
     description: string
-    validate-ieee2030-5: true/false
+    validate-ieee2030-5: none/incoming/outgoing/both
     connections:
       incoming-connection:
         -
@@ -598,7 +598,7 @@ connections:
 transformations:
   - name: JSON IncomingEvent to XML IEEE2030.5 Event
     description: Example showing transformation of messages from JSON to XML
-    validate-ieee2030-5: false
+    validate-ieee2030-5: none
     connections:
       incoming-connection:
         - MQTT-connection
@@ -716,7 +716,7 @@ connections:
 transformations:
   - name: XML IncomingEvent to JSON IEEE2030.5 Event
     description: Example showing transformation of messages from XML to JSON
-    validate-ieee2030-5: false
+    validate-ieee2030-5: none
     connections:
       incoming-connection:
         - MQTT-connection
@@ -813,7 +813,7 @@ connections:
 transformations:
   - name: XML IncomingEvent to JSON IEEE2030.5 Event
     description: Example showing transformation of messages from XML to JSON
-    validate-ieee2030-5: false
+    validate-ieee2030-5: none
     connections:
       incoming-connection:
         - Modbus-connection
@@ -881,12 +881,23 @@ LPC will for each register send new request with function code specified at ```m
 device at```modbus-device-id```.
 
 ## Validation of messages for IEEE 2030.5 schema compliance
-New option in the configuration `validate-ieee2030-5` is used to validate the messages for IEEE 2030.5 schema compliance. 
+
+New option in the configuration `validate-ieee2030-5` is used to validate the messages for IEEE 2030.5 schema
+compliance.
 This option can be individually set for each transformation in the configuration file.
-By setting the value of the option to `true`, LPC will validate the messages for IEEE 2030.5 schema compliance upon starting up. 
+
+By setting the value of the option to `both`, LPC will validate the messages for IEEE 2030.5 schema compliance for both
+incoming and outgoing messages.
+By setting the value of the option to `incoming`, LPC will validate the messages for IEEE 2030.5 schema compliance for
+incoming messages only.
+By setting the value of the option to `outgoing`, LPC will validate the messages for IEEE 2030.5 schema compliance for
+outgoing messages only.
+
+This will be validated upon startup and when the message is received or sent.
+
 In case of non-compliance, LPC will log the error message and suggest the possible correct structure.
 
-By default, if option is not present in the configuration file, the value of the option is set to `false`.
+By default, if option is not present in the configuration file, the value of the option is set to `none`.
 
 ## Deployment
 
@@ -946,7 +957,7 @@ If using different configuration, one should specify the location of the configu
 
 Logs are stored in the folder `logs` in the root of the project. If you are using Docker, logs are stored in the
 container. You can also mount the `logs` folder to the container to store `logs` on the host machine such as:
-    
+
 ```bash
 docker run -v /path/to/logs:/app/logs -v /path/to/config:/app/conf lpc:latest
 ```

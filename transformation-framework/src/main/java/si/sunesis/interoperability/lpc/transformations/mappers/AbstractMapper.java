@@ -38,7 +38,6 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 import java.io.StringReader;
-import java.text.ParseException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -75,6 +74,13 @@ public abstract class AbstractMapper {
         }
     }
 
+    /**
+     * Extracts a value from an XML string using the configured XPath expression.
+     * Parses the XML string into a document and delegates to the document-based method.
+     *
+     * @param xmlInput The XML string to extract the value from
+     * @return The extracted value as a string, or null if extraction fails
+     */
     public String getMappedValueXML(String xmlInput) {
         try {
             DocumentBuilder builder = factory.newDocumentBuilder();
@@ -88,6 +94,13 @@ public abstract class AbstractMapper {
         return null;
     }
 
+    /**
+     * Extracts a value from an XML document using the configured XPath expression.
+     * Uses XPath to extract the value and then processes it according to the configured type.
+     *
+     * @param xmlInput The XML document to extract the value from
+     * @return The extracted value as a string, processed according to its type, or null if extraction fails
+     */
     public String getMappedValueXML(Document xmlInput) {
         try {
             // Parse the input XML string
@@ -109,13 +122,13 @@ public abstract class AbstractMapper {
         return null;
     }
 
-    public String getMappedValueJSON(String jsonInput) throws JsonProcessingException, ParseException {
+    public String getMappedValueJSON(String jsonInput) throws JsonProcessingException {
         JsonNode rootNode = objectMapper.readTree(jsonInput);
 
         return getMappedValueJSON(rootNode);
     }
 
-    public String getMappedValueJSON(JsonNode jsonInput) throws ParseException {
+    public String getMappedValueJSON(JsonNode jsonInput) {
         if (getPath().startsWith("//")) {
             setPath(getPath().substring(1));
         }
@@ -158,54 +171,9 @@ public abstract class AbstractMapper {
     private String getValue(String cleanedValue) {
         cleanedValue = cleanedValue.trim();
         if (getValues() != null && getValues().length > 0) {
-            if (getType().toLowerCase().contains("int")) {
-                if (isNumber(cleanedValue)) {
-                    return getValues()[Integer.parseInt(cleanedValue)];
-                }
-                for (int iii = 0; iii < getValues().length; iii++) {
-                    if (getValues()[iii].equalsIgnoreCase(cleanedValue.trim())) {
-                        return String.valueOf(iii);
-                    }
-                }
-            } else if (getType().toLowerCase().contains("str")) {
-                if (isNumber(cleanedValue)) {
-                    return "\"" + getValues()[Integer.parseInt(cleanedValue)] + "\"";
-                }
-
-                for (int iii = 0; iii < getValues().length; iii++) {
-                    if (getValues()[iii].equalsIgnoreCase(cleanedValue.trim())) {
-                        return "\"" + iii + "\"";
-                    }
-                }
-
-                return null;
-            }
+            return getArrayValue(cleanedValue);
         } else if (getPattern() != null && (getType().equalsIgnoreCase("date") || getType().equalsIgnoreCase("datetime"))) {
-            setPattern(getPattern().replace("\"", "'"));
-            log.debug("Pattern: {}", getPattern());
-            log.debug("Date value to parse: {}", cleanedValue);
-
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(getPattern());
-
-            if (isNumber(cleanedValue)) {
-                Date date = new Date(Long.parseLong(cleanedValue));
-                LocalDateTime ldt = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-                return "\"" + ldt.format(formatter) + "\"";
-            }
-
-            Date date;
-
-            if (getPattern().contains("H") || getPattern().contains("h") || getPattern().contains("K") || getPattern().contains("k")) {
-                LocalDateTime ldt = LocalDateTime.parse(cleanedValue, formatter);
-                date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
-            } else {
-                LocalDate ld = LocalDate.parse(cleanedValue, formatter);
-                date = Date.from(ld.atStartOfDay(ZoneId.systemDefault()).toInstant());
-            }
-
-            log.debug("Parsed date: {}", date);
-
-            return "\"" + date.getTime() + "\"";
+            return getPatternValue(cleanedValue);
         }
 
         if (getType().toLowerCase().contains("str")) {
@@ -221,6 +189,61 @@ public abstract class AbstractMapper {
         }
 
         return cleanedValue;
+    }
+
+    private String getArrayValue(String cleanedValue) {
+        if (getType().toLowerCase().contains("int")) {
+            if (isNumber(cleanedValue)) {
+                return getValues()[Integer.parseInt(cleanedValue)];
+            }
+            for (int iii = 0; iii < getValues().length; iii++) {
+                if (getValues()[iii].equalsIgnoreCase(cleanedValue.trim())) {
+                    return String.valueOf(iii);
+                }
+            }
+        } else if (getType().toLowerCase().contains("str")) {
+            if (isNumber(cleanedValue)) {
+                return "\"" + getValues()[Integer.parseInt(cleanedValue)] + "\"";
+            }
+
+            for (int iii = 0; iii < getValues().length; iii++) {
+                if (getValues()[iii].equalsIgnoreCase(cleanedValue.trim())) {
+                    return "\"" + iii + "\"";
+                }
+            }
+
+            return null;
+        }
+
+        return null;
+    }
+
+    private String getPatternValue(String cleanedValue) {
+        setPattern(getPattern().replace("\"", "'"));
+        log.debug("Pattern: {}", getPattern());
+        log.debug("Date value to parse: {}", cleanedValue);
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(getPattern());
+
+        if (isNumber(cleanedValue)) {
+            Date date = new Date(Long.parseLong(cleanedValue));
+            LocalDateTime ldt = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+            return "\"" + ldt.format(formatter) + "\"";
+        }
+
+        Date date;
+
+        if (getPattern().contains("H") || getPattern().contains("h") || getPattern().contains("K") || getPattern().contains("k")) {
+            LocalDateTime ldt = LocalDateTime.parse(cleanedValue, formatter);
+            date = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+        } else {
+            LocalDate ld = LocalDate.parse(cleanedValue, formatter);
+            date = Date.from(ld.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        }
+
+        log.debug("Parsed date: {}", date);
+
+        return "\"" + date.getTime() + "\"";
     }
 
     public static boolean isNumber(String input) {

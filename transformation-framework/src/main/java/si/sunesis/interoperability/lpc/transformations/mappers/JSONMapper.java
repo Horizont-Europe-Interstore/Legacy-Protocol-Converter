@@ -34,6 +34,14 @@ import java.util.Arrays;
 @Slf4j
 public class JSONMapper extends AbstractMapper {
 
+    /**
+     * Constructs a JSONMapper from a JSON mapping definition string.
+     * Parses the mapping string to extract path, type, pattern, and values.
+     * Ensures the path starts with a forward slash.
+     *
+     * @param mapping The JSON string containing mapping definition
+     * @throws Exception If there is an error parsing the mapping string
+     */
     @SneakyThrows
     public JSONMapper(String mapping) {
         JsonNode root = objectMapper.readTree(mapping);
