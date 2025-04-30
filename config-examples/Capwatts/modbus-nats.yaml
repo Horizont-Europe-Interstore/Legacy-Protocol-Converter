@@ -1,0 +1,64 @@
+connections:
+  - name: NATS-connection
+    type: NATS
+    host: localhost
+    port: 4222
+    reconnect: true
+  - name: Modbus-connection
+    type: Modbus
+    host: 192.168.1.211
+    port: 502
+
+transformations:
+  - name: Modbus to JSON IEEE2030.5 Event
+    description: Example showing transformation of messages from Modbus to JSON
+    validate-ieee2030-5: both
+    connections:
+      incoming-connection:
+        - Modbus-connection
+      outgoing-connection:
+        - NATS-connection
+      outgoing-topic: capwatts
+      outgoing-format: JSON
+    to-outgoing:
+      to-topic: capwatts
+      message: '{
+            "lastUpdateTime": $timestamp,
+            "EventStatus": {
+                "Grid frequency": {
+                  "lpc:mapping": {
+                    "path": "27",
+                    "type": "int16",
+                    "values": ["scheduled", "active", "cancelled", "cancelled_with_r", "superseded"]  
+                  }
+                },
+                "Output active power": {
+                  "lpc:mapping": {
+                    "path": "29",
+                    "type": "int16"
+                  }
+                },
+                "potentiallySuperseded": false
+              },
+              "interval": {
+                "Input 1 current": {
+                  "lpc:mapping": {
+                    "path": "32",
+                    "type": "int16"
+                  }
+                }
+              }
+            }
+        '
+    interval-request:
+      interval: 3000
+      request:
+        modbus-function-code: 4
+        modbus-device-id: 1
+        modbus-registers:
+          - register-address: 27
+            type: int16
+          - register-address: 29
+            type: int16
+          - register-address: 32
+            type: int16

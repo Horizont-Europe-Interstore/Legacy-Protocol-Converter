@@ -1,0 +1,1122 @@
+connections:
+  - name: NATS-Server
+    type: NATS
+    host: localhost
+    port: 4222
+  - name: MQTT-broker
+    type: MQTT
+    host: 10.0.1.123 # IP of the MQTT broker
+    port: 8086
+    reconnect: true
+  - name: PQI-Modbus
+    type: Modbus
+    host: 10.0.2.123 # IP of the PQI device
+    port: 502
+transformations:
+  - name: PQI - Modbus to NATS
+    description: Transformation of messages from Modbus to JSON for PQI at the PCC
+    validate-ieee2030-5: both
+    connections:
+      incoming-connection:
+        - PQI-Modbus
+      outgoing-connection:
+        - NATS-Server
+      outgoing-topic: pqi.pcc
+      outgoing-format: JSON
+    to-outgoing:
+      to-topic: pqi.pcc
+      message: '{
+  "mirrorMeterReadingList": {
+    "mirrorMeterReading": [
+        {
+            "description": "Total Network Frequency",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1008,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 0
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 33
+                }
+            },
+            "mrid": {
+                "value": "PccPQIf"
+            }
+        },
+        {
+            "description": "RMS value u1E / u1N",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1010,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 128
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 29
+                }
+            },
+            "mrid": {
+                "value": "PccPQIu1"
+            }
+        },
+        {
+            "description": "RMS value u2E / u2N",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1012,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 64
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 29
+                }
+            },
+            "mrid": {
+                "value": "PccPQIu2"
+            }
+        },
+        {
+            "description": "RMS value u3E / u3N",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1014,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 32
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 29
+                }
+            },
+            "mrid": {
+                "value": "PccPQIu3"
+            }
+        },
+        {
+            "description": "RMS value u0E / uNE",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1016,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 0
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 29
+                }
+            },
+            "mrid": {
+                "value": "PccPQIu0"
+            }
+        },
+        {
+            "description": "THD from u1E / u1N [percent]",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1068,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 128
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 0
+                }
+            },
+            "mrid": {
+                "value": "PccPQIu1_thd"
+            }
+        },
+        {
+            "description": "THD from u2E / u2N [percent]",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1070,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 64
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 0
+                }
+            },
+            "mrid": {
+                "value": "PccPQIu2_thd"
+            }
+        },
+        {
+            "description": "THD from u3E / u3N [percent]",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1072,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 32
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 0
+                }
+            },
+            "mrid": {
+                "value": "PccPQIu3_thd"
+            }
+        },
+        {
+            "description": "THD from u0E / uNE [percent]",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1074,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 0
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 0
+                }
+            },
+            "mrid": {
+                "value": "PccPQIu0_thd"
+            }
+        },
+        {
+            "description": "RMS value Current i1",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1586,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 128
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 5
+                }
+            },
+            "mrid": {
+                "value": "PccPQIi1"
+            }
+        },
+        {
+            "description": "RMS value Current i2",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1588,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 64
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 5
+                }
+            },
+            "mrid": {
+                "value": "PccPQIi2"
+            }
+        },
+        {
+            "description": "RMS value Current i3",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1590,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 32
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 5
+                }
+            },
+            "mrid": {
+                "value": "PccPQIi3"
+            }
+        },
+        {
+            "description": "RMS value Current iE/N",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1592,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 0
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 5
+                }
+            },
+            "mrid": {
+                "value": "PccPQIi0"
+            }
+        },
+        {
+            "description": "Phase-real power L1",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1946,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 128
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 38
+                }
+            },
+            "mrid": {
+                "value": "PccPQIl1_p"
+            }
+        },
+        {
+            "description": "Phase-real power L2",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1952,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 64
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 38
+                }
+            },
+            "mrid": {
+                "value": "PccPQIl2_p"
+            }
+        },
+        {
+            "description": "Phase-real power L3",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1958,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 32
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 38
+                }
+            },
+            "mrid": {
+                "value": "PccPQIl3_p"
+            }
+        },
+        {
+            "description": "Phase-fundamental-reactive power L1",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1972,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 128
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 63
+                }
+            },
+            "mrid": {
+                "value": "PccPQIl1_q1"
+            }
+        },
+        {
+            "description": "Phase-fundamental-reactive power L2",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1980,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 64
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 63
+                }
+            },
+            "mrid": {
+                "value": "PccPQIl2_q1"
+            }
+        },
+        {
+            "description": "Phase-fundamental-reactive power L3",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1988,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 32
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 63
+                }
+            },
+            "mrid": {
+                "value": "PccPQIl3_q1"
+            }
+        },
+        {
+            "description": "Phase-apparent power L1",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1950,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 128
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 61
+                }
+            },
+            "mrid": {
+                "value": "PccPQIl1_s"
+            }
+        },
+        {
+            "description": "Phase-apparent power L2",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1956,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 64
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 61
+                }
+            },
+            "mrid": {
+                "value": "PccPQIl2_s"
+            }
+        },
+        {
+            "description": "Phase-apparent power L3",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1962,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 32
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 61
+                }
+            },
+            "mrid": {
+                "value": "PccPQIl3_s"
+            }
+        },
+        {
+            "description": "Phase-fundamental-real power L1",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1970,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 128
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 38
+                }
+            },
+            "mrid": {
+                "value": "PccPQIl1_p1"
+            }
+        },
+        {
+            "description": "Phase-fundamental-real power L2",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1978,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 64
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 38
+                }
+            },
+            "mrid": {
+                "value": "PccPQIl2_p1"
+            }
+        },
+        {
+            "description": "Phase-fundamental-real power L3",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1986,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 32
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 38
+                }
+            },
+            "mrid": {
+                "value": "PccPQIl3_p1"
+            }
+        },
+        {
+            "description": "THD from i1 [percent]",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1626,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 128
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 0
+                }
+            },
+            "mrid": {
+                "value": "PccPQIi1_thd"
+            }
+        },
+        {
+            "description": "THD from i2 [percent]",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1628,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 64
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 0
+                }
+            },
+            "mrid": {
+                "value": "PccPQIi2_thd"
+            }
+        },
+        {
+            "description": "THD from i3 [percent]",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1630,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 32
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 0
+                }
+            },
+            "mrid": {
+                "value": "PccPQIi3_thd"
+            }
+        },
+        {
+            "description": "THD from iE/N [percent]",
+            "lastUpdateTime": "$timestamp",
+            "reading": {
+                "value": {
+                    "lpc:mapping": {
+                        "path": 1632,
+                        "type": "float32"
+                    }
+                }
+            },
+            "readingType": {
+                "phase": {
+                    "value": 0
+                },
+                "powerOfTenMultiplier": {
+                    "value": 0
+                },
+                "uom": {
+                    "value": 0
+                }
+            },
+            "mrid": {
+                "value": "PccPQIi0_thd"
+            }
+        }
+    ],
+    "all": 29,
+    "results": 29
+  }
+}
+       '
+    interval-request:
+      interval: 1000 # Interval in milliseconds
+      request:
+        modbus-function-code: 3  # Function code for reading holding registers
+        modbus-device-id: 1  # Device ID
+        endianness: little
+        modbus-registers:
+          - register-address: 1008  # description: "Total Network Frequency"    
+            type: "float32"
+          - register-address: 1010  # description: "RMS value u1E / u1N"    
+            type: "float32"
+          - register-address: 1012  # description: "RMS value u2E / u2N"    
+            type: "float32"
+          - register-address: 1014  # description: "RMS value u3E / u3N"    
+            type: "float32"
+          - register-address: 1016  # description: "RMS value u0E / uNE"    
+            type: "float32"
+          - register-address: 1068  # description: "THD from u1E / u1N [percent]"    
+            type: "float32"
+          - register-address: 1070  # description: "THD from u2E / u2N [percent]"    
+            type: "float32"
+          - register-address: 1072  # description: "THD from u3E / u3N [percent]"    
+            type: "float32"
+          - register-address: 1074  # description: "THD from u0E / uNE [percent]"    
+            type: "float32"
+          - register-address: 1586  # description: "RMS value Current i1"    
+            type: "float32"
+          - register-address: 1588  # description: "RMS value Current i2"    
+            type: "float32"
+          - register-address: 1590  # description: "RMS value Current i3"    
+            type: "float32"
+          - register-address: 1592  # description: "RMS value Current iE/N"    
+            type: "float32"
+          - register-address: 1946  # description: "Phase-real power L1"    
+            type: "float32"
+          - register-address: 1952  # description: "Phase-real power L2"    
+            type: "float32"
+          - register-address: 1958  # description: "Phase-real power L3"    
+            type: "float32"
+          - register-address: 1972  # description: "Phase-fundamental-reactive power L1"    
+            type: "float32"
+          - register-address: 1980  # description: "Phase-fundamental-reactive power L2"    
+            type: "float32"
+          - register-address: 1988  # description: "Phase-fundamental-reactive power L3"    
+            type: "float32"
+          - register-address: 1950  # description: "Phase-apparent power L1"    
+            type: "float32"
+          - register-address: 1956  # description: "Phase-apparent power L2"    
+            type: "float32"
+          - register-address: 1962  # description: "Phase-apparent power L3"    
+            type: "float32"
+          - register-address: 1970  # description: "Phase-fundamental-real power L1"    
+            type: "float32"
+          - register-address: 1978  # description: "Phase-fundamental-real power L2"    
+            type: "float32"
+          - register-address: 1986  # description: "Phase-fundamental-real power L3"    
+            type: "float32"
+          - register-address: 1626  # description: "THD from i1 [percent]"    
+            type: "float32"
+          - register-address: 1628  # description: "THD from i2 [percent]"    
+            type: "float32"
+          - register-address: 1630  # description: "THD from i3 [percent]"    
+            type: "float32"
+          - register-address: 1632  # description: "THD from iE/N [percent]"    
+            type: "float32"
+
+  - name: PQI - NATS to MQTT
+    description: Transformation of messages from JSON to MQTT for PQI meter
+    connections:
+      incoming-connection:
+        - NATS-Server
+      incoming-topic: pqi.pcc # Origin topic in the NATS server (same as outgoing in the Modbus to NATS transformation)
+      outgoing-connection:
+        - MQTT-broker
+      outgoing-format: JSON
+    to-outgoing:
+      to-topic: pqi/pcc # Destination topic in the MQTT message   
+      message: '{
+         "frequency": {
+           "value": {
+             "lpc:mapping": {
+               "path": "mirrorMeterReadingList/mirrorMeterReading/0/reading/value",
+               "type": "float32"
+              }
+           }
+         },
+         "voltage": {
+           "ph1": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/1/reading/value",
+                 "type": "float32"
+                }
+             }
+           },
+           "ph2": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/2/reading/value",
+                 "type": "float32"
+                }
+             }
+           },
+           "ph3": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/3/reading/value",
+                 "type": "float32"
+                }
+             }
+           },
+           "ph0": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/4/reading/value",
+                 "type": "float32"
+                }
+             }
+           }
+         },
+         "current": {
+           "ph1": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/9/reading/value",
+                 "type": "float32"
+                }
+             }
+           },
+           "ph2": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/10/reading/value",
+                 "type": "float32"
+                }
+             }
+           },
+           "ph3": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/11/reading/value",
+                 "type": "float32"
+                }
+             }
+           },
+           "ph0": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/12/reading/value",
+                 "type": "float32"
+                }
+             }
+           }
+         },
+         "power": {
+           "Active": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/13/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/14/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/15/reading/value",
+                   "type": "float32"
+                  }
+               }
+             }
+           },
+           "Reactive_fund": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/16/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/17/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/18/reading/value",
+                   "type": "float32"
+                  }
+               }
+             }
+           },
+           "Apparent": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/19/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/20/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/21/reading/value",
+                   "type": "float32"
+                  }
+               }
+             }
+           },
+           "Active_fund": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/22/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/23/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/24/reading/value",
+                   "type": "float32"
+                  }
+               }
+             }
+           }
+         },
+         "thd": {
+           "voltage": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/5/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/6/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/7/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph0": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/8/reading/value",
+                   "type": "float32"
+                  }
+               }
+             }
+           },
+           "current": {
+             "ph1": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/25/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph2": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/26/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph3": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/27/reading/value",
+                   "type": "float32"
+                  }
+               }
+             },
+             "ph0": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/28/reading/value",
+                   "type": "float32"
+                  }
+               }
+             }
+           }
+         }
+       }
+       '

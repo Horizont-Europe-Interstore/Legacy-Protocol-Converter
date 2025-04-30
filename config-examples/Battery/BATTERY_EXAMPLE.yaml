@@ -1,0 +1,276 @@
+connections:
+  - name: NATS-Server
+    type: NATS
+    host: localhost
+    port: 4222
+  - name: MQTT-broker
+    type: MQTT
+    host: 10.0.1.123 # IP of the MQTT broker on the ICT platform. 
+    port: 8086
+    reconnect: true
+  - name: batteryName-invNum-boardName
+    type: Modbus
+    host: 10.0.2.123 # IP of the batteryName-invNum-boardName
+    port: 502
+transformations:
+  - name: batteryName-invNum-boardName - Modbus to NATS
+    description: Transformation of messages from Modbus to JSON for batteryName battery, inverter invNum, boardName board
+    validate-ieee2030-5: both
+    connections:
+      incoming-connection:
+        - batteryName-invNum-boardName
+      outgoing-connection:
+        - NATS-Server
+      outgoing-topic: batteryName.invNum.boardName
+      outgoing-format: JSON
+    to-outgoing:
+      to-topic: batteryName.invNum.boardName
+      message: '{
+  "DER": [
+  {
+      "description": "BESS",
+      "DERCapability": { # 10.10.4.4.2 in the standard
+        "DERType": { # from DERType object
+          "value": 80 #  “Other storage system” 
+        },
+        "modesSupported": { #  look for the valued in table 54 (Modes and attributes for storage type DERs)
+          "dERControlType": {
+            "value": [
+              0, # Charge mode
+              1  # Discharge mode
+            ]
+          }
+        },
+        "rtgMaxW": { # Maximum continuous active power output capability in watts
+          "value": {
+            "lpc:mapping": {
+              "path": "79",
+              "type": "int16"
+            }
+          },
+          "powerOfTenMultiplier": {
+            "value": 1
+          },
+          "uom": {
+            "value": 38 #W (Real power in Watts)
+          }
+        },
+        "rtgMaxWh": { # Maximum energy storage capacity in WattHours
+          "value": {
+            "lpc:mapping": {
+              "path": "79",
+              "type": "int16"
+            }
+          },
+          "powerOfTenMultiplier": {
+            "value": 1
+          },
+          "uom": {
+            "value": 72 # Wh (Real energy in Watt-hours)
+          }
+        },
+        "rtgMaxChargeRateW": { # Maximum rate of energy transfer received by the storage DER in Watts
+          "value": {
+            "lpc:mapping": {
+              "path": "79",
+              "type": "int16"
+            }
+          },
+          "powerOfTenMultiplier": {
+            "value": 1
+          },
+          "uom": {
+            "value": 38 #W (Real power in Watts)
+          }
+        },
+        "rtgMaxDischargeRateW": { # Maximum rate of energy transfer delivered by the storage DER in Watts - NB: is mandatory if combined generator/storage
+          "value": {
+            "lpc:mapping": {
+              "path": "79",
+              "type": "int16"
+            }
+          },
+          "powerOfTenMultiplier": {
+            "value": 1
+          },
+          "uom": {
+            "value": 38 #W (Real power in Watts)
+          }
+        },
+        "rtgMaxVAR": { # NOT MANDATORY - Maximum continuous reactive power delivered in var
+          "value": {
+            "lpc:mapping": {
+              "path": "79",
+              "type": "int16"
+            }
+          },
+          "powerOfTenMultiplier": {
+            "value": 1
+          },
+          "uom": {
+            "value": 63 #var (reactive power)
+          }
+        },
+        "rtgMaxVA": { # NOT MANDATORY - Maximum continuous apparent power output capability in VA
+          "value": {
+            "lpc:mapping": {
+              "path": "79",
+              "type": "int16"
+            }
+          },
+          "powerOfTenMultiplier": {
+            "value": 1
+          },
+          "uom": {
+            "value": 61 #VA (Apparent Power)
+          }
+        }
+      },
+      "StateOfChargeStatusType": { # State of charge status.
+        "dateTime" : "$timestamp",
+        "value": { # The value indicating the state (percent data type).
+          "lpc:mapping": {
+            "path": "51",
+            "type": "int16"
+          }
+        }
+      }
+    }
+  ],
+  "mirrorMeterReadingList": {  
+    "mirrorMeterReading": [
+      {
+        "description": "Input Voltage on Phase 1", # Friendly name
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "11",   # Modbus register
+              "type": "int16" # Format of Modbus register
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 0 # Phase indicated based on phaseType
+          },
+          "powerOfTenMultiplier": {
+            "value": 0 # power of ten multiplier based on PowerOfTenMultiplierType
+          },
+          "uom": {
+            "value": 0 # measurement unit based on UomType
+          }
+        },
+        "mrid": {
+          "value": "UniqueIdentifier00" # Reserved identifier for an object being created based on mRIDType
+        }
+      },
+      {
+        "description": "Total 3 phase active power",
+        "lastUpdateTime": "$timestamp",
+        "reading": {
+          "value": {
+            "lpc:mapping": {
+              "path": "300",
+              "type": "int32"
+            }
+          }
+        },
+        "readingType": {
+          "phase": {
+            "value": 0
+          },
+          "powerOfTenMultiplier": {
+            "value": 0
+          },
+          "uom": {
+            "value": 38
+          }
+        },
+        "mrid": {
+          "value": "BatteryActivePower"
+        }
+      }
+    ],
+    "all": 2,
+    "results": 2
+  }
+}
+       '
+    interval-request:
+      interval: 1000 # Interval in milliseconds
+      request:
+        modbus-function-code: 3  # Function code for reading holding registers
+        modbus-device-id: 1  # Device ID
+        endianness: big      # Modbus register endianess
+        modbus-registers:
+          - register-address: 11 # e.g.,: "Input mains star voltage V1"    
+            type: "int16"
+          - register-address: 79 # e.g.,: "Maximum continuous active power output capability in watts"    
+            type: "int16"
+          - register-address: 300 # e.g.,: "Total active power"    
+            type: "int32"
+
+  - name: batteryName-invNum-boardName - NATS to MQTT
+    description: Transformation of messages from JSON to MQTT for batteryName battery, inverter invNum, boardName board
+    connections:
+      incoming-connection:
+        - NATS-Server
+      incoming-topic: batteryName.invNum.boardName # Origin topic in the NATS server (same as outgoing in the Modbus to NATS transformation)
+      outgoing-connection:
+        - MQTT-broker
+      outgoing-format: JSON
+    to-outgoing:
+      to-topic: batteryName/invNum/boardName # Destination topic in the MQTT message "batteryName" bucket is specified on Telegraf  
+      message: '{
+         "voltage": {
+           "average": {
+             "value": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/0/reading/value",
+                 "type": "int32"
+                }
+             },
+             "multiplier": {
+               "lpc:mapping": {
+                 "path": "mirrorMeterReadingList/mirrorMeterReading/0/readingType/powerOfTenMultiplier/value",
+                 "type": "int32"
+                }
+             }
+           }
+         },
+         "power": {
+           "total": {
+             "active": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/1/reading/value",
+                   "type": "int32"
+                  }
+               },
+               "multiplier": {
+                 "lpc:mapping": {
+                   "path": "mirrorMeterReadingList/mirrorMeterReading/1/readingType/powerOfTenMultiplier/value",
+                   "type": "int32"
+                  }
+               }
+             }
+           },
+           "rated": {
+             "active": {
+               "value": {
+                 "lpc:mapping": {
+                   "path": "DER/0/DERCapability/rtgMaxW/value",
+                   "type": "int32"
+                  }
+               },
+               "multiplier": {
+                 "lpc:mapping": {
+                   "path": "DER/0/DERCapability/rtgMaxW/powerOfTenMultiplier/value",
+                   "type": "int32"
+                  }
+               }
+             }
+         }
+       }
+       '
