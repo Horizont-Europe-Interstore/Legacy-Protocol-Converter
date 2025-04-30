@@ -6,7 +6,7 @@
 
     <groupId>si.sunesis.interoperability.lpc</groupId>
     <artifactId>legacy-protocol-converter</artifactId>
-    <version>1.2.0</version>
+    <version>1.3.0</version>
     <packaging>pom</packaging>
     <modules>
         <module>transformation-framework</module>
@@ -28,9 +28,7 @@
 
         <jserialcomm.version>2.11.0</jserialcomm.version>
 
-        <jserialcomm.version>2.10.4</jserialcomm.version>
-
-        <interoperability-common.version>1.2.0</interoperability-common.version>
+        <interoperability-common.version>1.3.0</interoperability-common.version>
     </properties>
 
     <dependencies>

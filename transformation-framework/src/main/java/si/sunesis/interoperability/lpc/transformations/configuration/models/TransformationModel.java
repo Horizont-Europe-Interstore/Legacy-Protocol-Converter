@@ -24,28 +24,53 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 /**
+ * Defines a message transformation between different protocols and formats.
+ * Contains configuration for incoming and outgoing message transformations,
+ * connection details, and optional interval-based requests.
+ *
  * @author David Trafela, Sunesis
  * @since 1.0.0
  */
 @Data
 public class TransformationModel {
 
+    /**
+     * Unique identifier for the transformation
+     */
     private String name = null;
 
+    /**
+     * Human-readable description of the transformation's purpose
+     */
     private String description;
 
+    /**
+     * Flag indicating whether to validate against IEEE 2030.5 standard
+     */
     @JsonProperty("validate-ieee2030-5")
     private Boolean validateIEEE2030dot5 = false;
 
+    /**
+     * Connection settings for this transformation
+     */
     @JsonProperty("connections")
     private TransformationConnectionsModel connections;
 
+    /**
+     * Message transformation configuration for incoming messages
+     */
     @JsonProperty("to-incoming")
     private MessageModel toIncoming;
 
+    /**
+     * Configuration for periodic data polling requests
+     */
     @JsonProperty("interval-request")
     private IntervalRequestModel intervalRequest;
 
+    /**
+     * Message transformation configuration for outgoing messages
+     */
     @JsonProperty("to-outgoing")
     private MessageModel toOutgoing;
 }

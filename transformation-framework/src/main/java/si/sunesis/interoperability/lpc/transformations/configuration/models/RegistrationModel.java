@@ -27,16 +27,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * Configuration model for system registration with external services.
+ * Contains topic and message details for publishing registration information
+ * to specified outgoing connections.
+ *
  * @author David Trafela, Sunesis
  * @since 1.0.0
  */
 @Data
 public class RegistrationModel {
 
+    /**
+     * Topic for publishing registration messages
+     */
     private String topic;
 
+    /**
+     * Registration message content to publish
+     */
     private String message;
 
+    /**
+     * Names of connections to use for sending registration messages
+     */
     @JsonProperty("outgoing-connection")
     private List<String> outgoingConnections = new ArrayList<>();
 }

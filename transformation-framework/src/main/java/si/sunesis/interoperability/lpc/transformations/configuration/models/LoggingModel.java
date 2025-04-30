@@ -5,18 +5,27 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.apache.logging.log4j.Level;
 import si.sunesis.interoperability.lpc.transformations.logging.TriggeringPolicy;
 
 import java.util.List;
 
+/**
+ * Model class representing logging configuration.
+ * Used to parse and store logging settings from configuration files.
+ *
+ * @author David Trafela, Sunesis
+ * @since 1.0.0
+ */
 @Data
 public class LoggingModel {
 
     private static final String LOG_PATTERN = "%d %p -- %c -- %marker %m %X %ex %n";
+    private static final String LOG_LEVEL = "LOG_LEVEL";
 
     @JsonProperty("configuration-name")
     private String configurationName = "lpc";
-    private String status = "info";
+    private String status = Level.DEBUG.name();
 
     private List<Appender> appenders = List.of(new Appender(), Appender.getConsoleAppender());
 
@@ -38,6 +47,12 @@ public class LoggingModel {
         @JsonProperty("default-rollover-strategy")
         private RolloverStrategy rolloverStrategy = new RolloverStrategy();
 
+        /**
+         * Creates and returns a console appender configuration.
+         * Sets up default values for console logging.
+         *
+         * @return A configured console appender instance
+         */
         public static Appender getConsoleAppender() {
             Appender appender = new Appender();
             appender.setName("console");
@@ -58,6 +73,13 @@ public class LoggingModel {
     public static class Policies {
         private TriggeringPolicy type = TriggeringPolicy.TIME_BASED;
 
+        /**
+         * Sets the triggering policy type from a string value.
+         * Converts the string representation to the corresponding TriggeringPolicy enum value.
+         * Defaults to TIME_BASED if the input is null.
+         *
+         * @param type The string representation of the triggering policy type
+         */
         @JsonSetter("type")
         public void setType(String type) {
             if (type == null) {
@@ -78,8 +100,8 @@ public class LoggingModel {
 
     @Data
     public static class LoggerConfig {
-        private String name = "si.sunesis.interoperability.lpc";
-        private String level = System.getenv("LOG_LEVEL") == null ? "debug" : System.getenv("LOG_LEVEL");
+        private String name = "si.sunesis.interoperability";
+        private String level = System.getenv(LOG_LEVEL) == null ? Level.DEBUG.name() : System.getenv(LOG_LEVEL);
 
         @JsonProperty("appender-refs")
         private List<AppenderRef> appenderRefs = List.of(new AppenderRef());
@@ -98,6 +120,6 @@ public class LoggingModel {
     @NoArgsConstructor
     public static class AppenderRef {
         private String ref = "file_lpc";
-        private String level = System.getenv("LOG_LEVEL") == null ? "debug" : System.getenv("LOG_LEVEL");
+        private String level = System.getenv(LOG_LEVEL) == null ? Level.DEBUG.name() : System.getenv(LOG_LEVEL);
     }
 }

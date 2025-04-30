@@ -35,6 +35,10 @@ import javax.inject.Inject;
 import java.util.ArrayList;
 
 /**
+ * Main handler for managing all transformations in the application.
+ * Coordinates the creation, initialization, and lifecycle of individual transformation handlers.
+ * Handles configuration changes and system registration messages.
+ *
  * @author David Trafela, Sunesis
  * @since 1.0.0
  */
@@ -50,18 +54,32 @@ public class TransformationsHandler {
 
     private final ArrayList<TransformationHandler> transformationHandlers = new ArrayList<>();
 
+    /**
+     * Starts the transformation handling process.
+     * Sets up a configuration change consumer and initializes all transformations.
+     * This is the main entry point for starting the protocol conversion system.
+     *
+     * @throws LPCException If there is an error initializing transformations
+     */
     public void startHandling() throws LPCException {
         configuration.setConsumer(this::restart);
         handleTransformations();
     }
 
+    /**
+     * Creates and initializes all transformation handlers from the current configuration.
+     * Publishes registration messages to configured connections.
+     * Creates a transformation handler for each transformation model and starts it.
+     *
+     * @throws LPCException If there is an error initializing connections or handlers
+     */
     private void handleTransformations() throws LPCException {
         Connections connections = new Connections(configuration);
         for (ConfigurationModel configurationModel : configuration.getConfigurations()) {
             RegistrationModel registration = configurationModel.getRegistration();
 
             for (String connectionName : registration.getOutgoingConnections()) {
-                RequestHandler requestHandler = connections.getConnectionsMap().get(connectionName);
+                RequestHandler<String, ?> requestHandler = connections.getConnectionsMap().get(connectionName);
                 if (requestHandler != null) {
                     try {
                         requestHandler.publish(registration.getMessage(), registration.getTopic());
@@ -79,6 +97,12 @@ public class TransformationsHandler {
         }
     }
 
+    /**
+     * Restarts all transformation handlers after a configuration change.
+     * Destroys existing handlers, clears the list, and creates new ones based on updated configuration.
+     *
+     * @param b Flag indicating configuration change (not used but required for consumer interface)
+     */
     private void restart(Boolean b) {
         for (TransformationHandler handler : transformationHandlers) {
             handler.destroy();
