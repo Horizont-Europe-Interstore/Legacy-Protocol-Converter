@@ -32,6 +32,7 @@ import si.sunesis.interoperability.lpc.transformations.configuration.models.Mess
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ModbusModel;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.TransformationModel;
 import si.sunesis.interoperability.lpc.transformations.connections.Connections;
+import si.sunesis.interoperability.lpc.transformations.enums.ValidateIEEE2030Dot5;
 import si.sunesis.interoperability.lpc.transformations.exceptions.LPCException;
 import si.sunesis.interoperability.modbus.ModbusClient;
 
@@ -210,7 +211,8 @@ public class TransformationHandler {
                     String msg = new String((byte[]) message);
                     log.info("Incoming message on topic {} from device: \n{}", transformation.getConnections().getIncomingTopic(), msg);
 
-                    if (Boolean.TRUE.equals(transformation.getValidateIEEE2030dot5())) {
+                    if (transformation.getValidateIEEE2030dot5() == ValidateIEEE2030Dot5.BOTH ||
+                            transformation.getValidateIEEE2030dot5() == ValidateIEEE2030Dot5.INCOMING) {
                         try {
                             objectTransformer.validateTransform(msg, transformation.getValidateIEEE2030dot5());
                         } catch (Exception e) {
@@ -259,7 +261,8 @@ public class TransformationHandler {
                         String msg = new String((byte[]) message);
                         log.info("Incoming message from server: \n{}", msg);
 
-                        if (Boolean.TRUE.equals(transformation.getValidateIEEE2030dot5())) {
+                        if (transformation.getValidateIEEE2030dot5() == ValidateIEEE2030Dot5.BOTH ||
+                                transformation.getValidateIEEE2030dot5() == ValidateIEEE2030Dot5.OUTGOING) {
                             try {
                                 objectTransformer.validateTransform(msg, transformation.getValidateIEEE2030dot5());
                             } catch (Exception e) {
@@ -299,7 +302,8 @@ public class TransformationHandler {
                         String msg = new String((byte[]) message);
                         log.info("Incoming message from server for modbus: {}", msg);
 
-                        if (Boolean.TRUE.equals(transformation.getValidateIEEE2030dot5())) {
+                        if (transformation.getValidateIEEE2030dot5() == ValidateIEEE2030Dot5.BOTH ||
+                                transformation.getValidateIEEE2030dot5() == ValidateIEEE2030Dot5.INCOMING) {
                             try {
                                 objectTransformer.validateTransform(msg, transformation.getValidateIEEE2030dot5());
                             } catch (Exception e) {
@@ -332,7 +336,7 @@ public class TransformationHandler {
 
         log.debug("Publishing message to topic: {} with message: {}", topic, message);
 
-        if (Boolean.TRUE.equals(transformation.getValidateIEEE2030dot5())) {
+        if (transformation.getValidateIEEE2030dot5() != ValidateIEEE2030Dot5.NONE) {
             try {
                 objectTransformer.validateTransform(message, transformation.getValidateIEEE2030dot5());
             } catch (Exception e) {
@@ -586,7 +590,7 @@ public class TransformationHandler {
      * Transforms incoming message data to Modbus register values when applicable.
      * Sends the Modbus requests and processes responses, then transforms and publishes the results.
      *
-     * @param message                   The incoming message to transform (can be null for interval-based requests)
+     * @param message The incoming message to transform (can be null for interval-based requests)
      * @param incomingModbusConnections Map of Modbus client connections to use
      * @param outgoingConnections       List of outgoing connections for publishing responses
      * @param messageModel              Configuration for the Modbus message format

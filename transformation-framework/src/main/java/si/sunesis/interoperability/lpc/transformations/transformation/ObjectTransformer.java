@@ -37,6 +37,7 @@ import si.sunesis.interoperability.common.exceptions.HandlerException;
 import si.sunesis.interoperability.common.ieee2030dot5.IEEEObjectFactory;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ModbusModel;
 import si.sunesis.interoperability.lpc.transformations.constants.Constants;
+import si.sunesis.interoperability.lpc.transformations.enums.ValidateIEEE2030Dot5;
 import si.sunesis.interoperability.lpc.transformations.mappers.AbstractMapper;
 import si.sunesis.interoperability.lpc.transformations.mappers.JSONMapper;
 import si.sunesis.interoperability.lpc.transformations.mappers.XMLMapper;
@@ -233,7 +234,7 @@ public class ObjectTransformer {
      * @throws SAXException     If there is an error parsing XML
      * @throws HandlerException If there is an error handling the validation
      */
-    public String mockTransform(String mappingDefinition, Boolean validateIEEE2030dot5) throws IOException, SAXException, HandlerException {
+    public String mockTransform(String mappingDefinition, ValidateIEEE2030Dot5 validateIEEE2030dot5) throws IOException, SAXException, HandlerException {
         if (mappingDefinition == null) {
             throw new IllegalArgumentException("Mapping definition is null");
         }
@@ -269,7 +270,7 @@ public class ObjectTransformer {
                 throw new IllegalArgumentException("Invalid transformation. Json is not valid.");
             }
 
-            if (Boolean.TRUE.equals(validateIEEE2030dot5)) {
+            if (validateIEEE2030dot5 != ValidateIEEE2030Dot5.NONE) {
                 IEEEObjectFactory.validateIEEE2030dot5(transformedString);
             }
 
@@ -317,7 +318,7 @@ public class ObjectTransformer {
                 throw new IllegalArgumentException("Invalid transformation. XML is not valid.");
             }
 
-            if (Boolean.TRUE.equals(validateIEEE2030dot5)) {
+            if (validateIEEE2030dot5 != ValidateIEEE2030Dot5.NONE) {
                 IEEEObjectFactory.validateIEEE2030dot5(transformedString);
             }
 
@@ -513,7 +514,7 @@ public class ObjectTransformer {
         return mappingDefinition;
     }
 
-    public String validateTransform(String transformedMessage, Boolean validateIEEE2030dot5) throws IOException, SAXException, HandlerException {
+    public String validateTransform(String transformedMessage, ValidateIEEE2030Dot5 validateIEEE2030dot5) throws IOException, SAXException, HandlerException {
         if (transformedMessage == null) {
             throw new IllegalArgumentException("Message is null");
         }
@@ -532,7 +533,7 @@ public class ObjectTransformer {
                 throw new IllegalArgumentException("Invalid transformation. Json is not valid.");
             }
 
-            if (Boolean.TRUE.equals(validateIEEE2030dot5)) {
+            if (validateIEEE2030dot5 != ValidateIEEE2030Dot5.NONE) {
                 IEEEObjectFactory.validateIEEE2030dot5(transformedString);
             }
 
@@ -552,7 +553,7 @@ public class ObjectTransformer {
                 throw new IllegalArgumentException("Invalid transformation. XML is not valid.");
             }
 
-            if (Boolean.TRUE.equals(validateIEEE2030dot5)) {
+            if (validateIEEE2030dot5 != ValidateIEEE2030Dot5.NONE) {
                 IEEEObjectFactory.validateIEEE2030dot5(transformedString);
             }
 

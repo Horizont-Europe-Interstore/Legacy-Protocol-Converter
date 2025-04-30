@@ -29,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ConfigurationModel;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.TransformationModel;
 import si.sunesis.interoperability.lpc.transformations.constants.Constants;
+import si.sunesis.interoperability.lpc.transformations.enums.ValidateIEEE2030Dot5;
 import si.sunesis.interoperability.lpc.transformations.exceptions.LPCException;
 import si.sunesis.interoperability.lpc.transformations.logging.LoggingInit;
 import si.sunesis.interoperability.lpc.transformations.transformation.ObjectTransformer;
@@ -291,11 +292,17 @@ public class Configuration {
             try {
                 log.info("Validating messages for transformation: {}", transformationModel.getName());
 
-                if (transformationModel.getToOutgoing() != null && transformationModel.getToOutgoing().getMessage() != null) {
+                if (transformationModel.getToOutgoing() != null
+                        && transformationModel.getToOutgoing().getMessage() != null
+                        && (transformationModel.getValidateIEEE2030dot5() == ValidateIEEE2030Dot5.BOTH
+                        || transformationModel.getValidateIEEE2030dot5() == ValidateIEEE2030Dot5.OUTGOING)) {
                     objectTransformer.mockTransform(transformationModel.getToOutgoing().getMessage(), transformationModel.getValidateIEEE2030dot5());
                 }
 
-                if (transformationModel.getToIncoming() != null && transformationModel.getToIncoming().getMessage() != null) {
+                if (transformationModel.getToIncoming() != null
+                        && transformationModel.getToIncoming().getMessage() != null
+                        && (transformationModel.getValidateIEEE2030dot5() == ValidateIEEE2030Dot5.BOTH
+                        || transformationModel.getValidateIEEE2030dot5() == ValidateIEEE2030Dot5.INCOMING)) {
                     objectTransformer.mockTransform(transformationModel.getToIncoming().getMessage(), transformationModel.getValidateIEEE2030dot5());
                 }
             } catch (JsonProcessingException ex) {
