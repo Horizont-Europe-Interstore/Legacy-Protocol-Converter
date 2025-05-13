@@ -36,6 +36,8 @@ Overall, the Legacy Protocol Converter is a tool for enabling communication betw
 different communication protocols. It supports the latest IEEE2030.5 standard and provides a flexible and efficient way
 to translate messages between different protocols.
 
+![](docs/LPC.svg)
+
 ## Configuration
 
 General format of the configuration file is following:
