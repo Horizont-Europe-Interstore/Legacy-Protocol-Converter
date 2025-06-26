@@ -20,10 +20,6 @@
  */
 package si.sunesis.interoperability.lpc.transformations.connections;
 
-import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
-import com.hivemq.client.mqtt.mqtt3.Mqtt3ClientBuilder;
-import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
-import com.hivemq.client.mqtt.mqtt5.Mqtt5ClientBuilder;
 import com.intelligt.modbus.jlibmodbus.Modbus;
 import com.intelligt.modbus.jlibmodbus.master.ModbusMasterFactory;
 import com.intelligt.modbus.jlibmodbus.serial.*;
@@ -33,6 +29,10 @@ import com.rabbitmq.client.ConnectionFactory;
 import io.nats.client.Options;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.mqttv5.client.MqttAsyncClient;
+import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
+import org.eclipse.paho.mqttv5.common.MqttException;
 import si.sunesis.interoperability.common.interfaces.RequestHandler;
 import si.sunesis.interoperability.lpc.transformations.configuration.Configuration;
 import si.sunesis.interoperability.lpc.transformations.configuration.models.ConnectionModel;
@@ -46,12 +46,15 @@ import si.sunesis.interoperability.rabbitmq.ChannelHandler;
 import si.sunesis.interoperability.rabbitmq.RabbitMQClient;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.security.KeyManagementException;
 import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateFactory;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -123,14 +126,18 @@ public class Connections {
                     throw new LPCException("Error building NATS client", e);
                 }
             } else if (connection.getType().equalsIgnoreCase("MQTT")) {
-                if (connection.getVersion() == 3) {
-                    Mqtt3Client client = buildMqtt3Client(connection);
-                    this.connectionsMap.put(connection.getName(), client);
-                    clientMap.put(connection, client);
-                } else if (connection.getVersion() == 5) {
-                    Mqtt5Client client = buildMqtt5Client(connection);
-                    this.connectionsMap.put(connection.getName(), client);
-                    clientMap.put(connection, client);
+                try {
+                    if (connection.getVersion() == 3) {
+                        Mqtt3Client client = buildMqtt3Client(connection);
+                        this.connectionsMap.put(connection.getName(), client);
+                        clientMap.put(connection, client);
+                    } else if (connection.getVersion() == 5) {
+                        Mqtt5Client client = buildMqtt5Client(connection);
+                        this.connectionsMap.put(connection.getName(), client);
+                        clientMap.put(connection, client);
+                    }
+                } catch (Exception e) {
+                    throw new LPCException("Error building MQTT client", e);
                 }
             } else if (connection.getType().equalsIgnoreCase("modbus")) {
                 if (connection.getHost() == null && connection.getDevice() == null) {
@@ -204,76 +211,82 @@ public class Connections {
         return client;
     }
 
-    private Mqtt3Client buildMqtt3Client(ConnectionModel connection) throws LPCException {
-        Mqtt3ClientBuilder client = com.hivemq.client.mqtt.mqtt3.Mqtt3Client.builder()
-                .identifier(connection.getName())
-                .serverHost(connection.getHost())
-                .serverPort(connection.getPort())
-                .addDisconnectedListener(context -> log.debug("Disconnected from MQTT broker 3: {}", context.getCause()))
-                .addConnectedListener(context -> log.debug("Connected to MQTT broker 3"));
+    private Mqtt3Client buildMqtt3Client(ConnectionModel connection) throws LPCException, org.eclipse.paho.client.mqttv3.MqttException, KeyManagementException, NoSuchAlgorithmException {
+        MqttConnectOptions options = new MqttConnectOptions();
+
+        String serverURI = connection.getHost() + ":" + connection.getPort();
 
         if (Boolean.TRUE.equals(connection.getReconnect())) {
-            client = client.automaticReconnectWithDefaultConfig();
+            options.setAutomaticReconnect(true);
         }
 
         if (connection.getUsername() != null && connection.getPassword() != null) {
-            client = client.simpleAuth()
-                    .username(connection.getUsername())
-                    .password(connection.getPassword().getBytes())
-                    .applySimpleAuth();
+            options.setUserName(connection.getUsername());
+            options.setPassword(connection.getPassword().toCharArray());
         }
 
         if (connection.getSsl() != null) {
             if (connection.getSsl().getClientCertPath() != null && connection.getSsl().getCaCertPath() != null) {
-                client = client.sslConfig()
-                        .keyManagerFactory(buildKeyManagerFactory(connection))
-                        .trustManagerFactory(buildTrustManagerFactory(connection))
-                        .applySslConfig();
+                SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+                sslContext.init(buildKeyManagerFactory(connection).getKeyManagers(), buildTrustManagerFactory(connection).getTrustManagers(), null);
+                options.setSocketFactory(sslContext.getSocketFactory());
+
+                serverURI = "ssl://" + serverURI;
             } else if (Boolean.TRUE.equals(connection.getSsl().getUseDefault())) {
-                client = client.sslWithDefaultConfig();
+                SSLContext sslContext = SSLContext.getDefault();
+                options.setSocketFactory(sslContext.getSocketFactory());
+
+                serverURI = "ssl://" + serverURI;
+            } else {
+                serverURI = "tcp://" + serverURI;
             }
+        } else {
+            serverURI = "tcp://" + serverURI;
         }
 
-        Mqtt3BlockingClient client1 = client.buildBlocking();
-        client1.connect();
+        org.eclipse.paho.client.mqttv3.MqttAsyncClient mqttAsyncClient = new org.eclipse.paho.client.mqttv3.MqttAsyncClient(serverURI, connection.getName());
+        mqttAsyncClient.connect(options).waitForCompletion();
 
-        return new Mqtt3Client(client1.toAsync());
+        return new Mqtt3Client(mqttAsyncClient);
     }
 
-    private Mqtt5Client buildMqtt5Client(ConnectionModel connection) throws LPCException {
-        Mqtt5ClientBuilder client = com.hivemq.client.mqtt.mqtt5.Mqtt5Client.builder()
-                .identifier(connection.getName())
-                .serverHost(connection.getHost())
-                .serverPort(connection.getPort())
-                .addDisconnectedListener(context -> log.debug("Disconnected from MQTT broker 5: {}", context.getCause()))
-                .addConnectedListener(context -> log.debug("Connected to MQTT broker 5"));
+    private Mqtt5Client buildMqtt5Client(ConnectionModel connection) throws LPCException, MqttException, KeyManagementException, NoSuchAlgorithmException {
+        MqttConnectionOptions options = new MqttConnectionOptions();
+
+        String serverURI = connection.getHost() + ":" + connection.getPort();
 
         if (Boolean.TRUE.equals(connection.getReconnect())) {
-            client = client.automaticReconnectWithDefaultConfig();
+            options.setAutomaticReconnect(true);
         }
 
         if (connection.getUsername() != null && connection.getPassword() != null) {
-            client = client.simpleAuth()
-                    .username(connection.getUsername())
-                    .password(connection.getPassword().getBytes())
-                    .applySimpleAuth();
+            options.setUserName(connection.getUsername());
+            options.setPassword(connection.getPassword().getBytes());
         }
 
         if (connection.getSsl() != null) {
             if (connection.getSsl().getClientCertPath() != null && connection.getSsl().getCaCertPath() != null) {
-                client = client.sslConfig()
-                        .keyManagerFactory(buildKeyManagerFactory(connection))
-                        .trustManagerFactory(buildTrustManagerFactory(connection))
-                        .applySslConfig();
+                SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+                sslContext.init(buildKeyManagerFactory(connection).getKeyManagers(), buildTrustManagerFactory(connection).getTrustManagers(), null);
+                options.setSocketFactory(sslContext.getSocketFactory());
+
+                serverURI = "ssl://" + serverURI;
             } else if (Boolean.TRUE.equals(connection.getSsl().getUseDefault())) {
-                client = client.sslWithDefaultConfig();
+                SSLContext sslContext = SSLContext.getDefault();
+                options.setSocketFactory(sslContext.getSocketFactory());
+
+                serverURI = "ssl://" + serverURI;
+            } else {
+                serverURI = "tcp://" + serverURI;
             }
+        } else {
+            serverURI = "tcp://" + serverURI;
         }
 
-        Mqtt5BlockingClient client1 = client.buildBlocking();
-        client1.connect();
+        MqttAsyncClient mqttAsyncClient = new MqttAsyncClient(serverURI, connection.getName());
+        mqttAsyncClient.connect(options).waitForCompletion();
 
-        return new Mqtt5Client(client1.toAsync());
+        return new Mqtt5Client(mqttAsyncClient);
     }
 
     private RabbitMQClient buildRabbitMQClient(ConnectionModel connection) throws IOException, TimeoutException {
@@ -403,7 +416,11 @@ public class Connections {
     private KeyManagerFactory buildKeyManagerFactory(ConnectionModel connection) throws LPCException {
         try (FileInputStream inKey = new FileInputStream(connection.getSsl().getClientCertPath())) {
             KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            keyStore.load(inKey, connection.getSsl().getClientCertPassword().toCharArray());
+            if (connection.getSsl().getClientCertPassword() == null) {
+                keyStore.load(inKey, null);
+            } else {
+                keyStore.load(inKey, connection.getSsl().getClientCertPassword().toCharArray());
+            }
 
             KeyManagerFactory kmf = KeyManagerFactory
                     .getInstance(KeyManagerFactory.getDefaultAlgorithm());

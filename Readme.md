@@ -449,6 +449,8 @@ transformations:
           values: array
     interval-request:
       interval: integer
+      cron: 00/05/10/15/20/30
+      ntp-server: string
       request:
         modbus-function-code: integer
         modbus-device-id: integer
@@ -460,6 +462,8 @@ transformations:
             type: int8/int16/int32/int64/float32/float64
             pattern: string
             values: array
+            default: integer
+            factor: float
       or
       request:
         to-topic: string
@@ -504,6 +508,8 @@ Interval request options:
 
 - **interval-request:** Structure of the interval request with defined options.
     - **interval:** Interval in milliseconds for sending the request.
+  - **cron:** Cron minute expression. If specified, interval will start first request at provided minute.
+  - **ntp-server:** NTP server to synchronize the time for sending the request.
     - **request:** Structure of the request with defined mappings and topic.
     - **to-topic:** Topic on which the message will be sent.
     - **reply-from-topic:** Topic from which the reply will be received.
