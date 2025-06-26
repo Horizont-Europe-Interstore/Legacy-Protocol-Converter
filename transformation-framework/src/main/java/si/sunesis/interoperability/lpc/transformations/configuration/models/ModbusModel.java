@@ -41,7 +41,7 @@ public class ModbusModel {
     private Integer address;
 
     /**
-     * Path to the data field in message for mapping
+     * Path to the data field in a message for mapping
      */
     private String path;
 
@@ -59,6 +59,11 @@ public class ModbusModel {
      * Array of possible values for enum-like mappings
      */
     private String[] values;
+
+    /**
+     * Factor to apply for scaling values
+     */
+    private Float factor = 1f;
 
     /**
      * Default value to use when no mapping is found

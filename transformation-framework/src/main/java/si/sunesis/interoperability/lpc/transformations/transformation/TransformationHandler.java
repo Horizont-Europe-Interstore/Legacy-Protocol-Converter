@@ -34,6 +34,7 @@ import si.sunesis.interoperability.lpc.transformations.configuration.models.Tran
 import si.sunesis.interoperability.lpc.transformations.connections.Connections;
 import si.sunesis.interoperability.lpc.transformations.enums.ValidateIEEE2030Dot5;
 import si.sunesis.interoperability.lpc.transformations.exceptions.LPCException;
+import si.sunesis.interoperability.lpc.transformations.utils.TimeUtils;
 import si.sunesis.interoperability.modbus.ModbusClient;
 
 import javax.json.JsonObject;
@@ -519,6 +520,8 @@ public class TransformationHandler {
         String fromTopic = transformation.getIntervalRequest().getRequest().getFromTopic();
         fromTopic = replacePlaceholders(fromTopic);
 
+        Long delay = getIntervalDelay();
+
         for (RequestHandler requestHandler : incomingConnections) {
             requestHandler.subscribe(fromTopic, message -> {
                 String msg = new String((byte[]) message);
@@ -556,7 +559,7 @@ public class TransformationHandler {
                 } catch (Exception e) {
                     log.error("Error publishing interval request", e);
                 }
-            }, interval, interval, TimeUnit.MILLISECONDS);
+            }, delay, interval, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -571,6 +574,8 @@ public class TransformationHandler {
 
         Integer interval = transformation.getIntervalRequest().getInterval();
 
+        Long delay = getIntervalDelay();
+
         modbusScheduledFuture = executorService.scheduleAtFixedRate(() -> {
             log.info("Publishing Modbus interval request");
             MessageModel messageModel = transformation.getIntervalRequest().getRequest();
@@ -582,7 +587,7 @@ public class TransformationHandler {
             } catch (ParseException e) {
                 log.error("Error parsing message", e);
             }
-        }, interval, interval, TimeUnit.MILLISECONDS);
+        }, delay, interval, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -590,7 +595,7 @@ public class TransformationHandler {
      * Transforms incoming message data to Modbus register values when applicable.
      * Sends the Modbus requests and processes responses, then transforms and publishes the results.
      *
-     * @param message The incoming message to transform (can be null for interval-based requests)
+     * @param message                   The incoming message to transform (can be null for interval-based requests)
      * @param incomingModbusConnections Map of Modbus client connections to use
      * @param outgoingConnections       List of outgoing connections for publishing responses
      * @param messageModel              Configuration for the Modbus message format
@@ -648,7 +653,9 @@ public class TransformationHandler {
      * @return True if the request was processed successfully, false otherwise
      * @throws InterruptedException If the thread is interrupted during retry delays
      */
-    private Boolean sendPythonModbusRequest(JsonObject request, List<ModbusModel> group, Map<Integer, Object> registerMap, MessageModel messageModel, int retryCount, int maxRetries) throws InterruptedException {
+    private Boolean sendPythonModbusRequest(JsonObject
+                                                    request, List<ModbusModel> group, Map<Integer, Object> registerMap, MessageModel messageModel,
+                                            int retryCount, int maxRetries) throws InterruptedException {
         Response response = null;
         boolean success = false;
         try {
@@ -788,5 +795,32 @@ public class TransformationHandler {
         Collection<ModbusClient> clients = connections.getModbusConnections(transformation.getConnections().getIncomingConnections()).values();
 
         return !clients.isEmpty();
+    }
+
+    /**
+     * Calculates the delay for interval requests based on the configured cron expression or fixed interval.
+     * If a cron expression is provided, it calculates the next execution time using NTP synchronization if NTP is provided.
+     * If not, it uses the fixed interval value directly.
+     *
+     * @return The calculated delay in milliseconds
+     */
+    private Long getIntervalDelay() {
+        String cron = transformation.getIntervalRequest().getCron();
+        String ntpServer = transformation.getIntervalRequest().getNtpServer();
+
+        Long delay = Long.valueOf(transformation.getIntervalRequest().getInterval());
+
+        if (cron == null || cron.isEmpty()) {
+            log.debug("Using fixed delay for interval request: {} ms", delay);
+        } else {
+            try {
+                delay = TimeUtils.calculateDelay(cron, ntpServer);
+            } catch (Exception e) {
+                log.error("Error while calculating interval delay", e);
+                delay = Long.valueOf(transformation.getIntervalRequest().getInterval());
+            }
+        }
+
+        return delay;
     }
 }

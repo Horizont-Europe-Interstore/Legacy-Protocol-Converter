@@ -416,6 +416,8 @@ public class ModbusHandler {
         for (ModbusModel modbusModel : groupedModbusModel) {
             String type = modbusModel.getType();
 
+            Float factor = modbusModel.getFactor();
+
             int offset = modbusModel.getAddress() - groupedModbusModel.get(0).getAddress();
 
             if (type.contains("uint")) {
@@ -424,35 +426,70 @@ public class ModbusHandler {
                     // Extract low byte as unsigned 8-bit
                     int regValue = get(offset, registers);
                     int uint8Value = regValue & 0xFF;
+
+                    uint8Value *= factor;
+
                     registerMap.put(modbusModel.getAddress(), uint8Value);
                 } else if (type.contains("16")) {
-                    registerMap.put(modbusModel.getAddress(), getUInt16At(offset, registers));
+                    int regValue = getUInt16At(offset, registers);
+                    regValue *= factor;
+
+                    registerMap.put(modbusModel.getAddress(), regValue);
                 } else if (type.contains("64")) {
-                    registerMap.put(modbusModel.getAddress(), getUInt64At(offset, registers));
+                    BigInteger uint64Value = getUInt64At(offset, registers);
+                    uint64Value = uint64Value.multiply(BigInteger.valueOf(factor.longValue()));
+
+                    registerMap.put(modbusModel.getAddress(), uint64Value);
                 } else {
-                    registerMap.put(modbusModel.getAddress(), getUInt32At(offset, registers));
+                    long uint32Value = getUInt32At(offset, registers);
+                    uint32Value *= factor;
+
+                    registerMap.put(modbusModel.getAddress(), uint32Value);
                 }
             } else if (type.contains("int")) {
                 // Handle signed integers
                 if (type.contains("8")) {
-                    registerMap.put(modbusModel.getAddress(), DataUtils.byteLow(get(offset, registers)));
+                    byte regValue = DataUtils.byteLow(get(offset, registers));
+                    regValue *= factor;
+
+                    registerMap.put(modbusModel.getAddress(), regValue);
                 } else if (type.contains("16")) {
-                    registerMap.put(modbusModel.getAddress(), getInt16At(offset, registers));
+                    int regValue = getInt16At(offset, registers);
+                    regValue *= factor;
+
+                    registerMap.put(modbusModel.getAddress(), regValue);
                 } else if (type.contains("64")) {
-                    registerMap.put(modbusModel.getAddress(), getInt64At(offset, registers));
+                    long regValue = getInt64At(offset, registers);
+                    regValue *= factor;
+
+                    registerMap.put(modbusModel.getAddress(), regValue);
                 } else {
-                    registerMap.put(modbusModel.getAddress(), getInt32At(offset, registers));
+                    int regValue = getInt32At(offset, registers);
+                    regValue *= factor;
+
+                    registerMap.put(modbusModel.getAddress(), regValue);
                 }
             } else if (type.contains("long")) {
-                registerMap.put(modbusModel.getAddress(), getInt64At(offset, registers));
+                long regValue = getInt64At(offset, registers);
+                regValue *= factor;
+
+                registerMap.put(modbusModel.getAddress(), regValue);
             } else if (type.contains("float")) {
                 if (type.contains("64")) {
-                    registerMap.put(modbusModel.getAddress(), getFloat64At(offset, registers));
+                    double regValue = getFloat64At(offset, registers);
+                    regValue *= factor;
+
+                    registerMap.put(modbusModel.getAddress(), regValue);
                 } else {
-                    registerMap.put(modbusModel.getAddress(), getFloat32At(offset, registers));
+                    float regValue = getFloat32At(offset, registers);
+                    regValue *= factor;
+
+                    registerMap.put(modbusModel.getAddress(), regValue);
                 }
             } else if (type.contains("double")) {
-                registerMap.put(modbusModel.getAddress(), getFloat64At(offset, registers));
+                double regValue = getFloat64At(offset, registers);
+                regValue *= factor;
+                registerMap.put(modbusModel.getAddress(), regValue);
             } else {
                 throw new IllegalArgumentException("Wrong type: " + type);
             }

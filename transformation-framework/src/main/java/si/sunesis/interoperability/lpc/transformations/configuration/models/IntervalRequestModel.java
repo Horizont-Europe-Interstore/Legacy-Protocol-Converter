@@ -20,6 +20,8 @@
  */
 package si.sunesis.interoperability.lpc.transformations.configuration.models;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.Data;
 
 /**
@@ -37,6 +39,38 @@ public class IntervalRequestModel {
      * Time interval in seconds between periodic requests
      */
     private Integer interval;
+
+    /**
+     * Cron expression for scheduling the start of the periodic request.
+     * If set, it triggers interval requests based on the cron expression. Further requests will be made based on the interval.
+     */
+    private String cron;
+
+    @JsonSetter("cron")
+    public void setCron(String cronExpression) {
+        if (cronExpression != null && !cronExpression.isEmpty()) {
+            if (cronExpression.equalsIgnoreCase("05") || cronExpression.equalsIgnoreCase("5")) {
+                this.cron = "*/5 * * * *"; // Every 5 minutes
+            } else if (cronExpression.equalsIgnoreCase("10")) {
+                this.cron = "*/10 * * * *";
+            } else if (cronExpression.equalsIgnoreCase("15")) {
+                this.cron = "*/15 * * * *"; // Every 15 minutes
+            } else if (cronExpression.equalsIgnoreCase("20")) {
+                this.cron = "*/20 * * * *"; // Every 20 minutes
+            } else if (cronExpression.equalsIgnoreCase("30")) {
+                this.cron = "*/30 * * * *"; // Every 30 minutes
+            } else {
+                this.cron = "* * * * *"; // Every minute by default
+            }
+        }
+    }
+
+    /**
+     * NTP server address for time synchronization
+     * Used to ensure consistent timestamps
+     */
+    @JsonProperty("ntp-server")
+    private String ntpServer = null;
 
     /**
      * Message configuration for the periodic request
