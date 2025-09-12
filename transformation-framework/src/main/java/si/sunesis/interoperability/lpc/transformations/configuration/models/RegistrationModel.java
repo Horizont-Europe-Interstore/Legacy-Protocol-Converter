@@ -52,4 +52,10 @@ public class RegistrationModel {
      */
     @JsonProperty("outgoing-connection")
     private List<String> outgoingConnections = new ArrayList<>();
+
+    /**
+     * Optional Modbus device ID for systems using Modbus protocol
+     */
+    @JsonProperty("modbus-device-id")
+    private Integer deviceId = null;
 }

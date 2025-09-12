@@ -75,6 +75,9 @@ public class Connections {
     private final Map<String, RequestHandler> connectionsMap = new HashMap<>();
 
     @Getter
+    private final Map<String, String> connectionNameToIp = new HashMap<>();
+
+    @Getter
     private final Map<String, ConnectionModel> connectionModelMap = new HashMap<>();
 
     public Connections(Configuration configuration) throws LPCException {
@@ -208,6 +211,8 @@ public class Connections {
 
         client.connectSync(optionsBuilder.build(), connection.getReconnect());
 
+        this.connectionNameToIp.put(connection.getName(), connection.getHost() + ":" + connection.getPort());
+
         return client;
     }
 
@@ -246,6 +251,8 @@ public class Connections {
 
         org.eclipse.paho.client.mqttv3.MqttAsyncClient mqttAsyncClient = new org.eclipse.paho.client.mqttv3.MqttAsyncClient(serverURI, connection.getName());
         mqttAsyncClient.connect(options).waitForCompletion();
+
+        this.connectionNameToIp.put(connection.getName(), connection.getHost() + ":" + connection.getPort());
 
         return new Mqtt3Client(mqttAsyncClient);
     }
@@ -286,6 +293,8 @@ public class Connections {
         MqttAsyncClient mqttAsyncClient = new MqttAsyncClient(serverURI, connection.getName());
         mqttAsyncClient.connect(options).waitForCompletion();
 
+        this.connectionNameToIp.put(connection.getName(), connection.getHost() + ":" + connection.getPort());
+
         return new Mqtt5Client(mqttAsyncClient);
     }
 
@@ -298,6 +307,12 @@ public class Connections {
                 .setExchangeType(connection.getExchangeType())
                 .setRoutingKey(connection.getRoutingKey())
                 .build();
+
+        if (connection.getPort() != null) {
+            this.connectionNameToIp.put(connection.getName(), connection.getHost() + ":" + connection.getPort());
+        } else {
+            this.connectionNameToIp.put(connection.getName(), connection.getHost());
+        }
 
         return new RabbitMQClient(channelHandler);
     }
@@ -336,6 +351,8 @@ public class Connections {
 
             SerialParameters serialParameters = getSerialParameters(connectionModel);
 
+            this.connectionNameToIp.put(connectionModel.getName(), connectionModel.getHost() + ":" + connectionModel.getPort() + " / " + connectionModel.getDevice());
+
             return new ModbusClient(ModbusMasterFactory.createModbusMasterRTU(serialParameters));
         }
 
@@ -345,12 +362,16 @@ public class Connections {
             tcpParameters.setHost(InetAddress.getByName(connectionModel.getHost()));
             tcpParameters.setPort(connectionModel.getPort());
 
+            this.connectionNameToIp.put(connectionModel.getName(), connectionModel.getHost() + ":" + connectionModel.getPort());
+
             return new ModbusClient(ModbusMasterFactory.createModbusMasterTCP(tcpParameters));
         } else {
             // Serial client
             openPort(connectionModel);
 
             SerialParameters serialParameters = getSerialParameters(connectionModel);
+
+            this.connectionNameToIp.put(connectionModel.getName(), connectionModel.getDevice());
 
             return new ModbusClient(ModbusMasterFactory.createModbusMasterRTU(serialParameters));
         }

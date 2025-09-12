@@ -90,7 +90,7 @@ public class TransformationsHandler {
             }
 
             for (TransformationModel transformationModel : configurationModel.getTransformations()) {
-                TransformationHandler handler = new TransformationHandler(transformationModel, objectTransformer, connections);
+                TransformationHandler handler = new TransformationHandler(transformationModel, objectTransformer, connections, registration);
                 transformationHandlers.add(handler);
                 handler.handle();
             }

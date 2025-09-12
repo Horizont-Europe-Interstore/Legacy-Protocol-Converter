@@ -20,6 +20,8 @@
  */
 package si.sunesis.interoperability.lpc.transformations.transformation;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.intelligt.modbus.jlibmodbus.exception.IllegalDataAddressException;
 import com.intelligt.modbus.jlibmodbus.exception.ModbusIOException;
 import com.intelligt.modbus.jlibmodbus.exception.ModbusNumberException;
@@ -27,10 +29,7 @@ import com.intelligt.modbus.jlibmodbus.msg.base.ModbusRequest;
 import lombok.extern.slf4j.Slf4j;
 import si.sunesis.interoperability.common.exceptions.HandlerException;
 import si.sunesis.interoperability.common.interfaces.RequestHandler;
-import si.sunesis.interoperability.lpc.transformations.configuration.models.ConnectionModel;
-import si.sunesis.interoperability.lpc.transformations.configuration.models.MessageModel;
-import si.sunesis.interoperability.lpc.transformations.configuration.models.ModbusModel;
-import si.sunesis.interoperability.lpc.transformations.configuration.models.TransformationModel;
+import si.sunesis.interoperability.lpc.transformations.configuration.models.*;
 import si.sunesis.interoperability.lpc.transformations.connections.Connections;
 import si.sunesis.interoperability.lpc.transformations.enums.ValidateIEEE2030Dot5;
 import si.sunesis.interoperability.lpc.transformations.exceptions.LPCException;
@@ -41,6 +40,11 @@ import javax.json.JsonObject;
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.*;
@@ -69,16 +73,21 @@ public class TransformationHandler {
     private ScheduledFuture<?> modbusScheduledFuture;
     private ScheduledFuture<?> scheduledFuture;
 
+    private Map<String, String> mappingsCache = null;
+
+    private RegistrationModel registration;
+
     private final String port = System.getenv("PYTHON_PORT") != null ? System.getenv("PYTHON_PORT") : "9093";
 
     // Use a connection pool configuration for the client
     private final javax.ws.rs.client.Client webClient;
     private final WebTarget webTarget;
 
-    public TransformationHandler(TransformationModel transformation, ObjectTransformer objectTransformer, Connections connections) {
+    public TransformationHandler(TransformationModel transformation, ObjectTransformer objectTransformer, Connections connections, RegistrationModel registrationModel) {
         this.transformation = transformation;
         this.objectTransformer = objectTransformer;
         this.connections = connections;
+        this.registration = registrationModel;
 
         log.info("Transformation: {}", transformation.getName());
 
@@ -117,6 +126,68 @@ public class TransformationHandler {
      * @throws LPCException If there is an error during handling
      */
     public void handle() throws LPCException {
+        String incomingTopic = transformation.getConnections().getOutgoingTopic() != null ? transformation.getConnections().getOutgoingTopic() : null;
+        Integer deviceId = transformation.getToIncoming() != null ? transformation.getToIncoming().getDeviceId() : null;
+
+        for (String connectionName : registration.getOutgoingConnections()) {
+            RequestHandler requestHandler = connections.getConnectionsMap().get(connectionName);
+            if (requestHandler != null) {
+                try {
+                    String topic = replaceWithNatsId(registration.getTopic(), registration.getDeviceId());
+                    requestHandler.publish(registration.getMessage(), topic);
+                } catch (HandlerException e) {
+                    log.error("Error publishing registration message.", e);
+                }
+            }
+        }
+
+        if (incomingTopic != null && deviceId != null) {
+            incomingTopic = replaceWithNatsId(incomingTopic, deviceId);
+            for (String connectionName : transformation.getConnections().getOutgoingConnections()) {
+                RequestHandler requestHandler = connections.getConnectionsMap().get(connectionName);
+                if (requestHandler != null) {
+                    try {
+                        String message = """
+                                {
+                                    "deviceId": %d,
+                                    "topic": "%s"
+                                }
+                                """.formatted(deviceId, incomingTopic);
+                        requestHandler.publish(message, incomingTopic);
+
+                        log.info("Published registration message for incoming topic: {}", incomingTopic);
+                    } catch (HandlerException e) {
+                        log.error("Error publishing registration message.", e);
+                    }
+                }
+            }
+        }
+
+        String outgoingTopic = transformation.getToOutgoing() != null ? transformation.getToOutgoing().getToTopic() : null;
+        Integer outgoingDeviceId = transformation.getIntervalRequest() != null ? transformation.getIntervalRequest().getRequest().getDeviceId() : null;
+
+        if (outgoingTopic != null && outgoingDeviceId != null) {
+            outgoingTopic = replaceWithNatsId(outgoingTopic, outgoingDeviceId);
+            for (String connectionName : transformation.getConnections().getOutgoingConnections()) {
+                RequestHandler requestHandler = connections.getConnectionsMap().get(connectionName);
+                if (requestHandler != null) {
+                    try {
+                        String message = """
+                                {
+                                    "deviceId": %d,
+                                    "topic": "%s"
+                                }
+                                """.formatted(deviceId, outgoingTopic);
+                        requestHandler.publish(message, outgoingTopic);
+
+                        log.info("Published registration message for outgoing topic: {}", outgoingTopic);
+                    } catch (HandlerException e) {
+                        log.error("Error publishing registration message.", e);
+                    }
+                }
+            }
+        }
+
         handleConnections();
         handleOutgoingTransformations();
         handleIncomingTransformations();
@@ -228,6 +299,17 @@ public class TransformationHandler {
                     log.info("Transformed outgoing message: \n{}", transformedMessage);
 
                     String toTopic = transformation.getToOutgoing().getToTopic();
+
+                    Integer deviceId = null;
+
+                    if (transformation.getIntervalRequest() != null && transformation.getIntervalRequest().getRequest() != null) {
+                        deviceId = transformation.getIntervalRequest().getRequest().getDeviceId();
+                    } else if (transformation.getToIncoming() != null && transformation.getToIncoming().getDeviceId() != null) {
+                        deviceId = transformation.getToIncoming().getDeviceId();
+                    }
+
+                    toTopic = replaceWithNatsId(toTopic,
+                            deviceId);
                     toTopic = replacePlaceholders(toTopic);
 
                     sendMessage(transformedMessage,
@@ -294,6 +376,8 @@ public class TransformationHandler {
                 MessageModel messageModel = transformation.getToIncoming();
 
                 String outgoingTopic = transformation.getConnections().getOutgoingTopic();
+                outgoingTopic = replaceWithNatsId(outgoingTopic,
+                        messageModel.getDeviceId());
                 outgoingTopic = replacePlaceholders(outgoingTopic);
 
                 log.debug("Subscribing to incoming topic for Modbus: {}", outgoingTopic);
@@ -630,6 +714,8 @@ public class TransformationHandler {
                 log.info("Transformed message: {}", transformedMessage);
 
                 String toTopic = transformation.getToOutgoing().getToTopic();
+                toTopic = replaceWithNatsId(toTopic,
+                        messageModel.getDeviceId());
                 toTopic = replacePlaceholders(toTopic);
 
                 sendMessage(transformedMessage,
@@ -783,6 +869,84 @@ public class TransformationHandler {
         }
         matcher.appendTail(sb);
         return sb.toString();
+    }
+
+    /**
+     * Replaces the {natsId} placeholder in the topic with a unique NATS ID based on device ID and connection parameters.
+     * Generates a UUID based on the combination of connection IP and device ID, and caches the mappings in a local file.
+     * If the mapping already exists, it reuses the existing NATS ID.
+     *
+     * @return The topic string with {natsId} replaced by the actual NATS ID
+     */
+    private String replaceWithNatsId(String topic, Integer deviceId) {
+        log.debug("Replacing NATS ID in topic: {} for device ID: {}", topic, deviceId);
+
+        if (deviceId == null) return topic;
+        if (!topic.contains("{natsId}")) return topic;
+
+        try {
+            String[] incomingConnectionNames = transformation.getConnections().getIncomingConnections();
+            String conn = connections.getConnectionNameToIp().get(incomingConnectionNames[0]);
+
+            log.info("Replacing with NATS ID for device ID: {} and connection parameters: {} the topic: {}", deviceId, conn, topic);
+
+            // Initialize cache if not already done
+            if (mappingsCache == null) {
+                mappingsCache = new HashMap<>();
+                File file = new File("./mappings.json");
+                if (file.exists()) {
+                    Type type = new TypeToken<Map<String, String>>() {
+                    }.getType();
+                    String content = new String(Files.readAllBytes(Paths.get(file.getPath())));
+                    mappingsCache = new Gson().fromJson(content, type);
+                    if (mappingsCache == null) {
+                        mappingsCache = new HashMap<>();
+                    }
+                }
+            }
+
+            String key = conn + "_" + deviceId;
+            if (!mappingsCache.containsKey(key)) {
+                File file = new File("./mappings.json");
+                Type type = new TypeToken<Map<String, String>>() {
+                }.getType();
+                String content = new String(Files.readAllBytes(Paths.get(file.getPath())));
+                Map<String, String> fileCache = new Gson().fromJson(content, type);
+                if (fileCache == null) {
+                    fileCache = new HashMap<>();
+                }
+                fileCache.putAll(mappingsCache);
+
+                if (!fileCache.containsKey(key)) {
+                    // Generate and save new mapping
+                    String lpcIdKey = "lpcId";
+                    fileCache.putIfAbsent(lpcIdKey, String.valueOf(UUID.randomUUID()));
+
+                    String fromString = key + fileCache.get(lpcIdKey);
+                    //fromString = fromString.substring(0, Math.min(fromString.length(), 36));
+
+                    log.info("From string: {}", fromString);
+
+                    UUID natsId = UUID.nameUUIDFromBytes(fromString.getBytes());
+                    fileCache.put(key, String.valueOf(natsId));
+
+                    // Save updated mappings to file
+                    try {
+                        Files.write(Paths.get("./mappings.json"), new Gson().toJson(fileCache).getBytes());
+                    } catch (IOException e) {
+                        log.error("Error writing mappings file", e);
+                    }
+                }
+
+                mappingsCache.clear();
+                mappingsCache.putAll(fileCache);
+            }
+
+            return topic.replace("{natsId}", mappingsCache.get(key));
+        } catch (Exception e) {
+            log.error("Error replacing with NATS ID", e);
+            return topic;
+        }
     }
 
     /**
