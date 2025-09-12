@@ -6,7 +6,7 @@
     <parent>
         <groupId>si.sunesis.interoperability.lpc</groupId>
         <artifactId>legacy-protocol-converter</artifactId>
-        <version>1.4.0</version>
+        <version>1.5.0</version>
     </parent>
 
     <artifactId>transformation-framework</artifactId>

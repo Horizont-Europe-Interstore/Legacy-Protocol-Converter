@@ -1,5 +1,11 @@
 package si.sunesis.interoperability.lpc.transformations.constants;
 
+/**
+ * Defines constants for the Legacy Protocol Converter
+ *
+ * @author David Trafela, Sunesis
+ * @since 1.0.0
+ */
 public class Constants {
 
     private Constants() {
