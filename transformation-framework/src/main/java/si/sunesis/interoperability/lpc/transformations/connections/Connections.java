@@ -56,6 +56,7 @@ import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateFactory;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -80,8 +81,12 @@ public class Connections {
     @Getter
     private final Map<String, ConnectionModel> connectionModelMap = new HashMap<>();
 
-    public Connections(Configuration configuration) throws LPCException {
+    private final Boolean newConf;
+
+    public Connections(Configuration configuration, Boolean newConf) throws LPCException {
         this.configuration = configuration;
+        this.newConf = newConf;
+
         init();
     }
 
@@ -123,10 +128,14 @@ public class Connections {
                     clientMap.put(connection, natsRequestHandler);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw new LPCException("Interrupted NATS client", e);
+                    if (!newConf) {
+                        throw new LPCException("Interrupted NATS client", e);
+                    }
                 } catch (Exception e) {
                     log.error("Error building NATS client", e);
-                    throw new LPCException("Error building NATS client", e);
+                    if (!newConf) {
+                        throw new LPCException("Error building NATS client", e);
+                    }
                 }
             } else if (connection.getType().equalsIgnoreCase("MQTT")) {
                 try {
@@ -140,11 +149,16 @@ public class Connections {
                         clientMap.put(connection, client);
                     }
                 } catch (Exception e) {
-                    throw new LPCException("Error building MQTT client", e);
+                    log.error("Error building MQTT client", e);
+                    if (!newConf) {
+                        throw new LPCException("Error building MQTT client", e);
+                    }
                 }
             } else if (connection.getType().equalsIgnoreCase("modbus")) {
                 if (connection.getHost() == null && connection.getDevice() == null) {
-                    throw new LPCException("Host or device is required for Modbus connection!");
+                    if (!newConf) {
+                        throw new LPCException("Host or device is required for Modbus connection!");
+                    }
                 }
 
                 try {
@@ -153,7 +167,10 @@ public class Connections {
                     this.connectionsMap.put(connection.getName(), client);
                     clientMap.put(connection, client);
                 } catch (UnknownHostException | SerialPortException e) {
-                    throw new LPCException("Error building Modbus client", e);
+                    log.error("Error building Modbus client", e);
+                    if (!newConf) {
+                        throw new LPCException("Error building Modbus client", e);
+                    }
                 }
             } else if (connection.getType().equalsIgnoreCase("RabbitMQ")) {
                 RabbitMQClient client;
@@ -162,7 +179,10 @@ public class Connections {
                     this.connectionsMap.put(connection.getName(), client);
                     clientMap.put(connection, client);
                 } catch (IOException | TimeoutException e) {
-                    throw new LPCException("Error building RabbitMQ client", e);
+                    log.error("Error building RabbitMQ client", e);
+                    if (!newConf) {
+                        throw new LPCException("Error building RabbitMQ client", e);
+                    }
                 }
             }
         }
@@ -207,6 +227,42 @@ public class Connections {
 
         if (connection.getUsername() != null && connection.getPassword() != null) {
             optionsBuilder = optionsBuilder.userInfo(connection.getUsername(), connection.getPassword());
+        }
+
+        if (connection.getMaxPingsOut() != null) {
+            optionsBuilder = optionsBuilder.maxPingsOut(connection.getMaxPingsOut());
+        }
+
+        if (connection.getPingInterval() != null) {
+            optionsBuilder = optionsBuilder.pingInterval(Duration.ofMillis(connection.getPingInterval()));
+        }
+
+        if (connection.getRequestCleanupInterval() != null) {
+            optionsBuilder = optionsBuilder.requestCleanupInterval(Duration.ofMillis(connection.getRequestCleanupInterval()));
+        }
+
+        if (connection.getConnectionTimeout() != null) {
+            optionsBuilder = optionsBuilder.connectionTimeout(Duration.ofMillis(connection.getConnectionTimeout()));
+        }
+
+        if (connection.getReconnectBufferSize() != null) {
+            optionsBuilder = optionsBuilder.reconnectBufferSize(connection.getReconnectBufferSize());
+        }
+
+        if (connection.getReconnectWait() != null) {
+            optionsBuilder = optionsBuilder.reconnectWait(Duration.ofMillis(connection.getReconnectWait()));
+        }
+
+        if (connection.getMaxReconnects() != null) {
+            optionsBuilder = optionsBuilder.maxReconnects(connection.getMaxReconnects());
+        }
+
+        if (connection.getReconnectJitter() != null) {
+            optionsBuilder = optionsBuilder.reconnectJitter(Duration.ofMillis(connection.getReconnectJitter()));
+        }
+
+        if (connection.getReconnectJitterTls() != null) {
+            optionsBuilder = optionsBuilder.reconnectJitterTls(Duration.ofMillis(connection.getReconnectJitterTls()));
         }
 
         client.connectSync(optionsBuilder.build(), connection.getReconnect());

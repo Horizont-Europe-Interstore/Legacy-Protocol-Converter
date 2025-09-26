@@ -138,4 +138,59 @@ public class ConnectionModel {
      */
     @JsonProperty("stop-bits")
     private Integer stopBits;
+
+    // NATS specific parameters
+    /**
+     * Maximum number of pings without a response before considering the connection lost
+     */
+    @JsonProperty("max-pings-out")
+    private Integer maxPingsOut;
+
+    /**
+     * Interval in milliseconds between pings to the server
+     */
+    @JsonProperty("ping-interval")
+    private Integer pingInterval;
+
+    /**
+     * Interval in milliseconds to clean up old requests
+     */
+    @JsonProperty("request-cleanup-interval")
+    private Integer requestCleanupInterval;
+
+    /**
+     * Connection timeout in milliseconds
+     */
+    @JsonProperty("connection-timeout")
+    private Integer connectionTimeout;
+
+    /**
+     * Size of the buffer for reconnecting in bytes
+     */
+    @JsonProperty("reconnect-buffer-size")
+    private Integer reconnectBufferSize;
+
+    /**
+     * Wait time in milliseconds before attempting to reconnect
+     */
+    @JsonProperty("reconnect-wait")
+    private Integer reconnectWait;
+
+    /**
+     * Maximum number of reconnect attempts
+     */
+    @JsonProperty("max-reconnects")
+    private Integer maxReconnects;
+
+    /**
+     * Jitter random delay to apply to reconnect wait time
+     */
+    @JsonProperty("reconnect-jitter")
+    private Integer reconnectJitter;
+
+    /**
+     * Jitter random delay to apply to reconnect wait time when using TLS
+     */
+    @JsonProperty("reconnect-jitter-tls")
+    private Integer reconnectJitterTls;
 }
