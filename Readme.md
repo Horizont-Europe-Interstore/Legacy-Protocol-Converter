@@ -261,6 +261,15 @@ connections:
     data-bits: integer
     parity: none/even/odd/space/mark
     stop-bits: integer
+    max-pings-out: integer
+    ping-interval: integer
+    request-cleanup-interval: integer
+    connection-timeout: integer
+    reconnect-buffer-size: integer
+    reconnect-wait: integer
+    max-reconnects: integer
+    reconnect-jitter: integer
+    reconnect-jitter-tls: integer
 ...
 ```
 
@@ -269,7 +278,9 @@ connections:
 #### NATS
 
 Currently supported parameters for connection with NATS are **host**,
-**port**, **username**, **password** and **reconnect**.
+**port**, **username**, **password**, **reconnect**,
+**max-pings-out**, **ping-interval**, **request-cleanup-interval**, **connection-timeout**,
+**reconnect-buffer-size**, **reconnect-wait**, **max-reconnects**, **reconnect-jitter** and **reconnect-jitter-tls**.
 
 Example of configuration for NATS:
 
@@ -282,8 +293,20 @@ connections:
     username: userTest
     password: testUser
     reconnect: true
+    max-pings-out: 5 # Default is 2
+    ping-interval: 2000 # 2 seconds, default is 2 minutes
+    request-cleanup-interval: 60000 # 1 minute, 
+    connection-timeout: 2000 # 2 seconds, default is 2 seconds
+    reconnect-buffer-size: 1048576 # 1 MB, default is 8 MB
+    reconnect-wait: 1000 # 1 second, default is 2 seconds
+    max-reconnects: 5 # Default is 60
+    reconnect-jitter: 200 # 200 ms, default is 100 ms
+    reconnect-jitter-tls: 200 # 400 ms, default is 1 second
 ...
 ```
+
+For a more detailed description of the reconnect parameters, please refer
+to [NATS documentation](https://docs.nats.io/using-nats/developer/connecting/reconnect).
 
 #### MQTT
 

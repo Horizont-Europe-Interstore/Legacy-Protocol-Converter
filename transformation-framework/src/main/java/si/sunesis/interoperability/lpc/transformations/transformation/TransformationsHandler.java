@@ -63,7 +63,7 @@ public class TransformationsHandler {
      */
     public void startHandling() throws LPCException {
         configuration.setConsumer(this::restart);
-        handleTransformations();
+        handleTransformations(false);
     }
 
     /**
@@ -73,8 +73,8 @@ public class TransformationsHandler {
      *
      * @throws LPCException If there is an error initializing connections or handlers
      */
-    private void handleTransformations() throws LPCException {
-        Connections connections = new Connections(configuration);
+    private void handleTransformations(Boolean newConf) throws LPCException {
+        Connections connections = new Connections(configuration, newConf);
         for (ConfigurationModel configurationModel : configuration.getConfigurations()) {
             RegistrationModel registration = configurationModel.getRegistration();
 
@@ -110,7 +110,7 @@ public class TransformationsHandler {
 
         transformationHandlers.clear();
         try {
-            handleTransformations();
+            handleTransformations(true);
         } catch (LPCException e) {
             log.error("Failed to restart handling transformations", e);
             System.exit(1);
