@@ -36,50 +36,49 @@ def modbus_request(host, port, unit_id, start_register, function_code, values, c
 
         if not modbus_client.connect():
             response_data["message"] = "Failed to connect to Modbus server"
-            print(json.dumps(response_data))  # Output JSON
-            return
+            #print(json.dumps(response_data))  # Output JSON
+            return response_data
 
         response_modbus = None
 
         match function_code:
             case 1:  # Read Coils
                 print("Reading Coils")
-                response_modbus = modbus_client.read_coils(address=start_register, count=count, slave=unit_id)
+                response_modbus = modbus_client.read_coils(address=start_register, count=count, device_id=unit_id)
             case 2:  # Read Discrete Inputs
                 print("Reading Discrete Inputs")
-                response_modbus = modbus_client.read_discrete_inputs(address=start_register, count=count, slave=unit_id)
+                response_modbus = modbus_client.read_discrete_inputs(address=start_register, count=count, device_id=unit_id)
             case 3:  # Read Holding Registers
                 print("Reading Holding Registers")
                 response_modbus = modbus_client.read_holding_registers(address=start_register, count=count,
-                                                                       slave=unit_id)
+                                                                       device_id=unit_id)
             case 4:  # Read Input Registers
                 print("Reading Input Registers")
-                response_modbus = modbus_client.read_input_registers(address=start_register, count=count, slave=unit_id)
+                response_modbus = modbus_client.read_input_registers(address=start_register, count=count, device_id=unit_id)
             case 5:  # Write Single Coil
                 print("Reading Output Registers")
                 if values is None or len(values) != 1:
-                    response_modbus[
-                        "message"] = "Error: --values must contain exactly one value (0 or 1) for function code 5"
+                    response_data["message"] = "Error: --values must contain exactly one value (0 or 1) for function code 5"
                     return response_data
-                response_modbus = modbus_client.write_coil(start_register, values[0] > 0, slave=unit_id)
+                response_modbus = modbus_client.write_coil(start_register, values[0] > 0, device_id=unit_id)
             case 6:  # Write Single Register
                 print("Writing Single Register")
                 if values is None or len(values) != 1:
                     response_data["message"] = "Error: --values must contain exactly one value for function code 6"
                     return response_data
-                response_modbus = modbus_client.write_register(start_register, values[0], slave=unit_id)
+                response_modbus = modbus_client.write_register(start_register, values[0], device_id=unit_id)
             case 16:  # Write Multiple Registers
                 print("Writing Multiple Registers")
                 if values is None:
                     response_data["message"] = "Error: --values must be specified for function code 11"
                     return response_data
-                response_modbus = modbus_client.write_registers(start_register, values, slave=unit_id)
+                response_modbus = modbus_client.write_registers(start_register, values, device_id=unit_id)
             case 15:  # Write Multiple Coils
                 print("Writing Multiple Coils")
                 if values is None:
                     response_data["message"] = "Error: --values must be specified for function code 15"
                     return response_data
-                response_modbus = modbus_client.write_coils(start_register, [v > 0 for v in values], slave=unit_id)
+                response_modbus = modbus_client.write_coils(start_register, [v > 0 for v in values], device_id=unit_id)
             case 23:  # Read Write Multiple Registers
                 print("Read Write Multiple Registers")
                 if values is None:
@@ -90,7 +89,7 @@ def modbus_request(host, port, unit_id, start_register, function_code, values, c
                 response_modbus = modbus_client.readwrite_registers(address=start_register,
                                                                     values=values,
                                                                     read_count=count,
-                                                                    slave=unit_id)
+                                                                    device_id=unit_id)
             case _:
                 print(f"Unsupported function code: {function_code}")
                 response_data["message"] = f"Unsupported function code: {function_code}"
@@ -152,7 +151,8 @@ if __name__ == '__main__':
     parser.add_argument("--port", type=int, default=int(os.getenv("MODBUS_PORT", 502)), help="Modbus TCP port")
     parser.add_argument("--unit_id", type=int, default=1, help="Unit ID of the Modbus device")
     parser.add_argument("--start_register", type=int, help="Start register or coil address")
-    parser.add_argument("--function_code", type=int, choices=[1, 2, 3, 4, 5, 6, 11, 15, 16], help="Modbus function code")
+    parser.add_argument("--function_code", type=int, choices=[1, 2, 3, 4, 5, 6, 11, 15, 16],
+                        help="Modbus function code")
     parser.add_argument("--values", type=int, nargs="+", help="Values to write (for write functions)")
     parser.add_argument("--count", type=int, default=1, help="Number of registers/coils to read")
     parser.add_argument("--api", action="store_true", help="Start FastAPI server")
